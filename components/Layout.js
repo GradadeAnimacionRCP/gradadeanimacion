@@ -16,12 +16,12 @@ export function useSesion() {
       router.replace('/');
       return;
     }
-    supabase.from('usuarios').select('*').eq('id', id).single().then(({ data }) => {
-      if (!data) {
+    supabase.rpc('obtener_usuario', { p_id: id }).then(({ data, error }) => {
+      if (error || !data || data.length === 0) {
         borrarSesion();
         router.replace('/');
       } else {
-        setSesion(data);
+        setSesion(data[0]);
       }
     });
   }, []);
