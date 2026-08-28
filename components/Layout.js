@@ -16,8 +16,14 @@ export function useSesion() {
       router.replace('/');
       return;
     }
+
+    const timeoutId = setTimeout(() => {
+      setSesion((actual) => (actual === undefined ? null : actual));
+    }, 10000);
+
     supabase.rpc('obtener_usuario', { p_id: id })
       .then(({ data, error }) => {
+        clearTimeout(timeoutId);
         if (error || !data || data.length === 0) {
           borrarSesion();
           router.replace('/');
@@ -26,6 +32,7 @@ export function useSesion() {
         }
       })
       .catch((err) => {
+        clearTimeout(timeoutId);
         console.error('Error comprobando sesión:', err);
         setSesion(null);
       });
