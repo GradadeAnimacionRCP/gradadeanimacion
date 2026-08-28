@@ -87,6 +87,7 @@ export default function Home() {
       <PageWrapper>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ ...authCardStyle, textAlign: 'center', maxWidth: 360, width: '100%' }}>
+            <img src="/escudo.png" alt="" style={{ width: 56, height: 56, marginBottom: 12 }} />
             <h1 style={{ fontFamily: fontStack.display, color: PALETTE.chalk, fontSize: 28, letterSpacing: 1, margin: '0 0 8px' }}>
               ¡Hola, {sesion.usuario}!
             </h1>
@@ -106,12 +107,15 @@ export default function Home() {
     <PageWrapper>
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
         <div style={{ width: '100%', maxWidth: 380 }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <h1 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 30, color: PALETTE.chalk, margin: 0, letterSpacing: 2 }}>
-              GRADA DE ANIMACIÓN
-            </h1>
-            <div style={{ color: PALETTE.brass, fontFamily: fontStack.label, letterSpacing: 2, fontSize: 12, textTransform: 'uppercase', fontWeight: 700 }}>
-              Racing Club Portuense
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 24 }}>
+            <img src="/escudo.png" alt="" style={{ width: 52, height: 52 }} />
+            <div style={{ textAlign: 'left' }}>
+              <h1 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 26, color: PALETTE.chalk, margin: 0, letterSpacing: 1.5, lineHeight: 1.05 }}>
+                GRADA DE ANIMACIÓN
+              </h1>
+              <div style={{ color: PALETTE.brass, fontFamily: fontStack.label, letterSpacing: 1.5, fontSize: 11.5, textTransform: 'uppercase', fontWeight: 700, marginTop: 3 }}>
+                Racing Club Portuense
+              </div>
             </div>
           </div>
 
