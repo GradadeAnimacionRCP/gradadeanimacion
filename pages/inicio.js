@@ -22,7 +22,20 @@ export default function Inicio() {
   const [busInfo, setBusInfo] = useState('');
   const [busCargando, setBusCargando] = useState(false);
 
-  if (!sesion) return null;
+    if (sesion === undefined) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>
+        Cargando...
+      </div>
+    );
+  }
+  if (sesion === null) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff8a8a', fontFamily: fontStack.label, padding: 20, textAlign: 'center' }}>
+        No se pudo comprobar tu sesión. Recarga la página o vuelve a iniciar sesión.
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
