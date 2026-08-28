@@ -31,15 +31,20 @@ export default function Home() {
     setComprobando(false);
   }, []);
 
-  const handleLogin = async (e) => {
+    const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setCargando(true);
-    const { data, error } = await supabase.rpc('iniciar_sesion', { p_usuario: usuario, p_password: password });
-    setCargando(false);
-    if (error) { setError(error.message); return; }
-    guardarSesion(data[0].id);
-    router.push('/inicio');
+    try {
+      const { data, error } = await supabase.rpc('iniciar_sesion', { p_usuario: usuario, p_password: password });
+      if (error) { setError(error.message); setCargando(false); return; }
+      if (!data || !data[0]) { setError('No se pudo iniciar sesión. Inténtalo de nuevo.'); setCargando(false); return; }
+      guardarSesion(data[0].id);
+      window.location.href = '/inicio';
+    } catch (err) {
+      setError('Error inesperado: ' + (err && err.message ? err.message : 'desconocido'));
+      setCargando(false);
+    }
   };
 
   const handleRegistro = async (e) => {
@@ -47,11 +52,16 @@ export default function Home() {
     setError('');
     if (password !== password2) { setError('Las contraseñas no coinciden.'); return; }
     setCargando(true);
-    const { data, error } = await supabase.rpc('registrar_usuario', { p_usuario: usuario, p_password: password });
-    setCargando(false);
-    if (error) { setError(error.message); return; }
-    guardarSesion(data[0].id);
-    router.push('/inicio');
+    try {
+      const { data, error } = await supabase.rpc('registrar_usuario', { p_usuario: usuario, p_password: password });
+      if (error) { setError(error.message); setCargando(false); return; }
+      if (!data || !data[0]) { setError('No se pudo crear la cuenta. Inténtalo de nuevo.'); setCargando(false); return; }
+      guardarSesion(data[0].id);
+      window.location.href = '/inicio';
+    } catch (err) {
+      setError('Error inesperado: ' + (err && err.message ? err.message : 'desconocido'));
+      setCargando(false);
+    }
   };
 
   if (comprobando) {
