@@ -24,6 +24,7 @@ export const inputStyle = {
   background: "rgba(255,255,255,0.05)",
   color: PALETTE.chalk,
   fontSize: 15,
+  letterSpacing: 1,
   fontFamily: fontStack.body,
   outline: "none",
   marginBottom: 4,
