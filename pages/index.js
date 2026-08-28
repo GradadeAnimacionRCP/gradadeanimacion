@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
+import { guardarSesion, getSesionGuardada } from '../lib/session';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field, PageWrapper } from '../components/UI';
-
-const SESSION_KEY = 'gda_sesion_usuario';
-
-function guardarSesion(id) {
-  if (typeof window !== 'undefined') localStorage.setItem(SESSION_KEY, id);
-}
-function borrarSesion() {
-  if (typeof window !== 'undefined') localStorage.removeItem(SESSION_KEY);
-}
-function getSesionGuardada() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(SESSION_KEY);
-}
 
 function tabPillStyle(active) {
   return {
@@ -27,7 +16,8 @@ function tabPillStyle(active) {
 }
 
 export default function Home() {
-  const [sesion, setSesion] = useState(undefined);
+  const router = useRouter();
+  const [comprobando, setComprobando] = useState(true);
   const [modo, setModo] = useState('login');
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
@@ -37,9 +27,8 @@ export default function Home() {
 
   useEffect(() => {
     const id = getSesionGuardada();
-    if (!id) { setSesion(null); return; }
-    supabase.from('usuarios').select('*').eq('id', id).single()
-      .then(({ data }) => setSesion(data || null));
+    if (id) { router.replace('/inicio'); return; }
+    setComprobando(false);
   }, []);
 
   const handleLogin = async (e) => {
@@ -49,9 +38,8 @@ export default function Home() {
     const { data, error } = await supabase.rpc('iniciar_sesion', { p_usuario: usuario, p_password: password });
     setCargando(false);
     if (error) { setError(error.message); return; }
-    const user = data[0];
-    guardarSesion(user.id);
-    setSesion(user);
+    guardarSesion(data[0].id);
+    router.push('/inicio');
   };
 
   const handleRegistro = async (e) => {
@@ -62,42 +50,15 @@ export default function Home() {
     const { data, error } = await supabase.rpc('registrar_usuario', { p_usuario: usuario, p_password: password });
     setCargando(false);
     if (error) { setError(error.message); return; }
-    const user = data[0];
-    guardarSesion(user.id);
-    setSesion(user);
+    guardarSesion(data[0].id);
+    router.push('/inicio');
   };
 
-  const handleLogout = () => {
-    borrarSesion();
-    setSesion(null);
-  };
-
-  if (sesion === undefined) {
+  if (comprobando) {
     return (
       <PageWrapper>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>
-        </div>
-      </PageWrapper>
-    );
-  }
-
-  if (sesion) {
-    return (
-      <PageWrapper>
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ ...authCardStyle, textAlign: 'center', maxWidth: 360, width: '100%' }}>
-            <img src="/escudo.png" alt="" style={{ width: 56, height: 56, marginBottom: 12 }} />
-            <h1 style={{ fontFamily: fontStack.display, color: PALETTE.chalk, fontSize: 28, letterSpacing: 1, margin: '0 0 8px' }}>
-              ¡Hola, {sesion.usuario}!
-            </h1>
-            <p style={{ color: 'rgba(244,246,241,0.65)', fontSize: 14 }}>
-              Sesión iniciada correctamente {sesion.is_admin ? '· admin' : ''}
-            </p>
-            <Button variant="ghost" onClick={handleLogout} style={{ marginTop: 12, width: '100%' }}>
-              Cerrar sesión
-            </Button>
-          </div>
         </div>
       </PageWrapper>
     );
@@ -129,7 +90,7 @@ export default function Home() {
               <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
             </Field>
             <Field label="Contraseña">
-                <input type="password" style={{ ...inputStyle, fontSize: 10 }} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <input type="password" style={{ ...inputStyle, fontSize: 10 }} value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
             {modo === 'registro' && (
               <Field label="Repite la contraseña">
