@@ -16,14 +16,19 @@ export function useSesion() {
       router.replace('/');
       return;
     }
-    supabase.rpc('obtener_usuario', { p_id: id }).then(({ data, error }) => {
-      if (error || !data || data.length === 0) {
-        borrarSesion();
-        router.replace('/');
-      } else {
-        setSesion(data[0]);
-      }
-    });
+    supabase.rpc('obtener_usuario', { p_id: id })
+      .then(({ data, error }) => {
+        if (error || !data || data.length === 0) {
+          borrarSesion();
+          router.replace('/');
+        } else {
+          setSesion(data[0]);
+        }
+      })
+      .catch((err) => {
+        console.error('Error comprobando sesión:', err);
+        setSesion(null);
+      });
   }, []);
 
   return sesion;
