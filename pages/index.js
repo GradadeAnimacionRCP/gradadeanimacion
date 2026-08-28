@@ -129,11 +129,11 @@ export default function Home() {
               <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
             </Field>
             <Field label="Contraseña">
-              <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <input type="password" style={{ ...inputStyle, fontSize: 13 }} value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
             {modo === 'registro' && (
               <Field label="Repite la contraseña">
-                <input type="password" style={inputStyle} value={password2} onChange={(e) => setPassword2(e.target.value)} />
+                <input type="password" style={{ ...inputStyle, fontSize: 13 }} value={password2} onChange={(e) => setPassword2(e.target.value)} />
               </Field>
             )}
             {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 12 }}>{error}</div>}
