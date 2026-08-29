@@ -44,6 +44,8 @@ export default function Admin() {
   const [verifyId, setVerifyId] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
 
+  const [imagenAmpliada, setImagenAmpliada] = useState(null);
+
   const cargar = useCallback(async () => {
     if (!sesion) return;
     const { data, error } = await supabase.rpc('admin_listar_socios', { p_admin_id: sesion.id });
@@ -276,11 +278,14 @@ export default function Admin() {
                   {s.solicitud_renovacion_fecha && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(201,162,75,0.08)', border: '1px solid rgba(201,162,75,0.3)', borderRadius: 10, padding: '8px 10px' }}>
                       {s.solicitud_renovacion_comprobante && (
-                        <img src={s.solicitud_renovacion_comprobante} alt="Comprobante" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: `1px solid ${PALETTE.brass}` }} />
+                        <img src={s.solicitud_renovacion_comprobante} alt="Comprobante"
+                          onClick={() => setImagenAmpliada(s.solicitud_renovacion_comprobante)}
+                          style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: `1px solid ${PALETTE.brass}`, cursor: 'pointer' }} />
                       )}
                       <div style={{ fontSize: 12, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700 }}>
                         Solicitó renovación el {formatFecha(s.solicitud_renovacion_fecha)}
                         {!s.solicitud_renovacion_comprobante && ' · sin comprobante'}
+                        {s.solicitud_renovacion_comprobante && ' · toca la foto para ampliarla'}
                       </div>
                     </div>
                   )}
@@ -531,6 +536,14 @@ export default function Admin() {
       )}
       {editandoNoticia && (
         <NoticiaModal noticia={editandoNoticia} onClose={() => setEditandoNoticia(null)} onSaved={() => { setEditandoNoticia(null); cargarNoticias(); }} />
+      )}
+      {imagenAmpliada && (
+        <div onClick={() => setImagenAmpliada(null)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 95,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, cursor: 'pointer',
+        }}>
+          <img src={imagenAmpliada} alt="Comprobante" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 12 }} />
+        </div>
       )}
     </Layout>
   );
