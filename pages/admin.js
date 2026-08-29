@@ -2,7 +2,7 @@ import { EditarSocioModal } from '../components/EditarSocioModal';
 import { PartidoModal } from '../components/PartidoModal';
 import { NoticiaModal } from '../components/NoticiaModal';
 import { PanelTemporada } from '../components/PanelTemporada';
-import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck } from 'lucide-react';
+import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck, Camera } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
@@ -10,18 +10,14 @@ import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from '../components/UI';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
 import { formatFechaPartido } from '../components/PartidoCard';
-import { UserPlus, Check, X, Users, RefreshCw, FlaskConical, AlertTriangle } from 'lucide-react';
+import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle } from 'lucide-react';
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
 
-function tabPillStyle(active) {
-  return {
-    flex: 1, padding: '10px 0', borderRadius: 10,
-    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
-    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
-    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
-    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-  };
+function filtrar(lista, query, campoFn) {
+  const q = query.trim().toLowerCase();
+  if (!q) return lista;
+  return lista.filter((item) => campoFn(item).toLowerCase().includes(q));
 }
 
 export default function Admin() {
@@ -45,6 +41,11 @@ export default function Admin() {
   const [verifyResult, setVerifyResult] = useState(null);
 
   const [imagenAmpliada, setImagenAmpliada] = useState(null);
+
+  const [querySolicitudes, setQuerySolicitudes] = useState('');
+  const [queryRenovaciones, setQueryRenovaciones] = useState('');
+  const [querySocios, setQuerySocios] = useState('');
+  const [queryUsuarios, setQueryUsuarios] = useState('');
 
   const cargar = useCallback(async () => {
     if (!sesion) return;
@@ -98,6 +99,23 @@ export default function Admin() {
     !s.traspaso_cuenta_destino
   );
 
+  const campoBusqueda = (s) => `${s.nombre} ${s.apellidos} ${formatNumeroSocio(s.numero_socio)}`;
+  const pendientesFiltrados = filtrar(pendientes, querySolicitudes, campoBusqueda);
+  const pendientesPagoFiltrados = filtrar(pendientesPago, queryRenovaciones, campoBusqueda);
+  const restoFiltrado = filtrar(resto, querySocios, campoBusqueda);
+  const usuariosFiltrados = filtrar(usuarios || [], queryUsuarios, (u) => u.usuario);
+
+  const ADMIN_TABS = [
+    { id: 'altas', label: 'Altas', icon: UserPlus, badge: pendientes.length },
+    { id: 'renovaciones', label: 'Renovaciones', icon: RefreshCw, badge: pendientesPago.length },
+    { id: 'socios', label: 'Socios', icon: Users, badge: traspasos.length },
+    { id: 'calendario', label: 'Calendario', icon: Calendar, badge: 0 },
+    { id: 'noticias', label: 'Noticias', icon: Newspaper, badge: 0 },
+    { id: 'usuarios', label: 'Usuarios', icon: UserCog, badge: (usuarios || []).filter((u) => u.reset_requested).length },
+    { id: 'temporada', label: 'Temporada', icon: Camera, badge: 0 },
+    { id: 'verificar', label: 'Comprobar', icon: ShieldCheck, badge: 0 },
+  ];
+
   const handleAprobar = async (s) => {
     setProcesando(s.id);
     await supabase.rpc('aprobar_socio', { p_admin_id: sesion.id, p_id: s.id, p_tipo: tipoSeleccion[s.id] || 'General' });
@@ -115,13 +133,6 @@ export default function Admin() {
     if (!confirm(`¿Confirmas que ${s.nombre} ${s.apellidos} ha pagado la cuota? Se renovará su carnet un año.`)) return;
     setProcesando(s.id);
     await supabase.rpc('marcar_pagado_y_renovar', { p_admin_id: sesion.id, p_id: s.id });
-    setProcesando(null);
-    cargar();
-  };
-  const handleForzarCaducidad = async (s) => {
-    if (!confirm(`[Prueba] ¿Forzar la caducidad de ${s.nombre} ${s.apellidos}?`)) return;
-    setProcesando(s.id);
-    await supabase.rpc('admin_forzar_caducidad', { p_admin_id: sesion.id, p_id: s.id });
     setProcesando(null);
     cargar();
   };
@@ -194,19 +205,33 @@ export default function Admin() {
           Panel de socios {socios ? `(${resto.length})` : ''}
         </h2>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          <button onClick={() => setTab('altas')} style={tabPillStyle(tab === 'altas')}>
-            Altas {pendientes.length > 0 ? `(${pendientes.length})` : ''}
-          </button>
-          <button onClick={() => setTab('renovaciones')} style={tabPillStyle(tab === 'renovaciones')}>
-            Renov. {pendientesPago.length > 0 ? `(${pendientesPago.length})` : ''}
-          </button>
-          <button onClick={() => setTab('socios')} style={tabPillStyle(tab === 'socios')}>Socios</button>
-          <button onClick={() => setTab('calendario')} style={tabPillStyle(tab === 'calendario')}>Calendario</button>
-          <button onClick={() => setTab('noticias')} style={tabPillStyle(tab === 'noticias')}>Noticias</button>
-          <button onClick={() => setTab('usuarios')} style={tabPillStyle(tab === 'usuarios')}>Usuarios</button>
-          <button onClick={() => setTab('temporada')} style={tabPillStyle(tab === 'temporada')}>Temporada</button>
-          <button onClick={() => setTab('verificar')} style={tabPillStyle(tab === 'verificar')}>Comprobar</button>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' }}>
+          {ADMIN_TABS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                position: 'relative', flex: '0 0 auto', minWidth: 76, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 5, padding: '10px 10px', borderRadius: 12, cursor: 'pointer',
+                background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.12)'}`,
+                color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
+              }}>
+                {t.badge > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 4, right: 6, minWidth: 16, height: 16, borderRadius: 999,
+                    background: PALETTE.flare, color: PALETTE.chalk, fontSize: 10, fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+                    fontFamily: fontStack.label, boxShadow: `0 0 0 2px ${PALETTE.pitchDark}`,
+                  }}>
+                    {t.badge > 99 ? '99+' : t.badge}
+                  </span>
+                )}
+                <Icon size={19} />
+                <span style={{ fontFamily: fontStack.label, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {socios === undefined && (tab === 'altas' || tab === 'renovaciones' || tab === 'socios') && (
@@ -214,85 +239,106 @@ export default function Admin() {
         )}
 
         {socios !== undefined && tab === 'altas' && (
-          pendientes.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.55)' }}>
-              <UserPlus size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
-              <p>No hay solicitudes pendientes.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pendientes.map((s) => {
-                const tipoActual = tipoSeleccion[s.id] || 'General';
-                return (
-                  <div key={s.id} style={{ background: 'rgba(255,90,31,0.08)', border: '1px solid rgba(255,90,31,0.4)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div>
-                      <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
-                        {formatNumeroSocio(s.numero_socio)} · solicitado {formatFecha(s.fecha_solicitud)}
+          <>
+            {pendientes.length > 3 && (
+              <input style={{ ...inputStyle, marginBottom: 14 }} placeholder="Buscar por nombre o número..."
+                value={querySolicitudes} onChange={(e) => setQuerySolicitudes(e.target.value)} />
+            )}
+            {pendientes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.55)' }}>
+                <UserPlus size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <p>No hay solicitudes pendientes.</p>
+              </div>
+            ) : pendientesFiltrados.length === 0 ? (
+              <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center', padding: '6px 0' }}>Ningún resultado.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {pendientesFiltrados.map((s) => {
+                  const tipoActual = tipoSeleccion[s.id] || 'General';
+                  return (
+                    <div key={s.id} style={{ background: 'rgba(255,90,31,0.08)', border: '1px solid rgba(255,90,31,0.4)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {s.foto ? <img src={s.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={18} opacity={0.5} />}
+                        </div>
+                        <div>
+                          <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
+                          <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
+                            {formatNumeroSocio(s.numero_socio)} · solicitado {formatFecha(s.fecha_solicitud)}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {TIPOS_SOCIO.map((t) => (
+                          <button key={t} onClick={() => setTipoSeleccion((prev) => ({ ...prev, [s.id]: t }))}
+                            style={{ padding: '6px 11px', borderRadius: 999, fontFamily: fontStack.label, fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                              background: tipoActual === t ? PALETTE.stripe : 'rgba(255,255,255,0.06)', color: tipoActual === t ? PALETTE.chalk : 'rgba(244,246,241,0.75)',
+                              border: `1px solid ${tipoActual === t ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}` }}>{t}</button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <Button variant="primary" disabled={procesando === s.id} onClick={() => handleAprobar(s)} style={{ flex: 1, fontSize: 12.5 }}>
+                          <Check size={14} /> Aceptar como {tipoActual}
+                        </Button>
+                        <Button variant="danger" disabled={procesando === s.id} onClick={() => handleRechazar(s)} style={{ fontSize: 12.5 }}>
+                          <X size={14} /> Rechazar
+                        </Button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {TIPOS_SOCIO.map((t) => (
-                        <button key={t} onClick={() => setTipoSeleccion((prev) => ({ ...prev, [s.id]: t }))}
-                          style={{ padding: '6px 11px', borderRadius: 999, fontFamily: fontStack.label, fontWeight: 700, fontSize: 12, cursor: 'pointer',
-                            background: tipoActual === t ? PALETTE.stripe : 'rgba(255,255,255,0.06)', color: tipoActual === t ? PALETTE.chalk : 'rgba(244,246,241,0.75)',
-                            border: `1px solid ${tipoActual === t ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}` }}>{t}</button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <Button variant="primary" disabled={procesando === s.id} onClick={() => handleAprobar(s)} style={{ flex: 1, fontSize: 12.5 }}>
-                        <Check size={14} /> Aceptar como {tipoActual}
-                      </Button>
-                      <Button variant="danger" disabled={procesando === s.id} onClick={() => handleRechazar(s)} style={{ fontSize: 12.5 }}>
-                        <X size={14} /> Rechazar
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
         {socios !== undefined && tab === 'renovaciones' && (
-          pendientesPago.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.55)' }}>
-              <RefreshCw size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
-              <p>No hay carnets pendientes de renovar.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pendientesPago.map((s) => (
-                <div key={s.id} style={{ background: 'rgba(255,176,32,0.08)', border: '1px solid rgba(255,176,32,0.4)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: 140 }}>
-                      <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
-                        {formatNumeroSocio(s.numero_socio)} · caducó {formatFecha(s.fecha_caducidad)}
+          <>
+            {pendientesPago.length > 3 && (
+              <input style={{ ...inputStyle, marginBottom: 14 }} placeholder="Buscar por nombre o número..."
+                value={queryRenovaciones} onChange={(e) => setQueryRenovaciones(e.target.value)} />
+            )}
+            {pendientesPago.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.55)' }}>
+                <RefreshCw size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <p>No hay carnets pendientes de renovar.</p>
+              </div>
+            ) : pendientesPagoFiltrados.length === 0 ? (
+              <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center', padding: '6px 0' }}>Ningún resultado.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {pendientesPagoFiltrados.map((s) => (
+                  <div key={s.id} style={{ background: 'rgba(255,176,32,0.08)', border: '1px solid rgba(255,176,32,0.4)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 140 }}>
+                        <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
+                          {formatNumeroSocio(s.numero_socio)} · caducó {formatFecha(s.fecha_caducidad)}
+                        </div>
                       </div>
+                      <Button variant="primary" disabled={procesando === s.id} onClick={() => handleMarcarPagado(s)} style={{ fontSize: 12.5 }}>
+                        <Check size={14} /> Marcar pagado y renovar
+                      </Button>
                     </div>
-                    <Button variant="primary" disabled={procesando === s.id} onClick={() => handleMarcarPagado(s)} style={{ fontSize: 12.5 }}>
-                      <Check size={14} /> Marcar pagado y renovar
-                    </Button>
+                    {s.solicitud_renovacion_fecha && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(201,162,75,0.08)', border: '1px solid rgba(201,162,75,0.3)', borderRadius: 10, padding: '8px 10px' }}>
+                        {s.solicitud_renovacion_comprobante && (
+                          <img src={s.solicitud_renovacion_comprobante} alt="Comprobante"
+                            onClick={() => setImagenAmpliada(s.solicitud_renovacion_comprobante)}
+                            style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: `1px solid ${PALETTE.brass}`, cursor: 'pointer' }} />
+                        )}
+                        <div style={{ fontSize: 12, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700 }}>
+                          Solicitó renovación el {formatFecha(s.solicitud_renovacion_fecha)}
+                          {!s.solicitud_renovacion_comprobante && ' · sin comprobante'}
+                          {s.solicitud_renovacion_comprobante && ' · toca la foto para ampliarla'}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {s.solicitud_renovacion_fecha && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(201,162,75,0.08)', border: '1px solid rgba(201,162,75,0.3)', borderRadius: 10, padding: '8px 10px' }}>
-                      {s.solicitud_renovacion_comprobante && (
-                        <img src={s.solicitud_renovacion_comprobante} alt="Comprobante"
-                          onClick={() => setImagenAmpliada(s.solicitud_renovacion_comprobante)}
-                          style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: `1px solid ${PALETTE.brass}`, cursor: 'pointer' }} />
-                      )}
-                      <div style={{ fontSize: 12, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700 }}>
-                        Solicitó renovación el {formatFecha(s.solicitud_renovacion_fecha)}
-                        {!s.solicitud_renovacion_comprobante && ' · sin comprobante'}
-                        {s.solicitud_renovacion_comprobante && ' · toca la foto para ampliarla'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {socios !== undefined && tab === 'socios' && (
@@ -325,23 +371,28 @@ export default function Admin() {
                 </div>
               </div>
             )}
+            {resto.length > 3 && (
+              <input style={{ ...inputStyle, marginBottom: 14 }} placeholder="Buscar por nombre o número..."
+                value={querySocios} onChange={(e) => setQuerySocios(e.target.value)} />
+            )}
+            {resto.length > 0 && restoFiltrado.length === 0 && (
+              <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center', padding: '6px 0' }}>Ningún resultado.</p>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {resto.map((s) => {
+              {restoFiltrado.map((s) => {
                 const est = estadoMember(s);
                 const rechazado = s.estado_solicitud === 'rechazado';
                 return (
                   <div key={s.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <Users size={18} opacity={0.5} />
+                    <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {s.foto ? <img src={s.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={16} opacity={0.5} />}
+                    </div>
                     <div style={{ flex: 1, minWidth: 140 }}>
                       <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{s.nombre} {s.apellidos}</div>
                       <div style={{ fontSize: 12.5, color: rechazado ? '#ff8a8a' : ESTADO_COLOR[est], fontFamily: fontStack.label, fontWeight: 700 }}>
                         {formatNumeroSocio(s.numero_socio)} · {rechazado ? 'Rechazado' : ESTADO_LABEL[est]}
                       </div>
                     </div>
-                    <button onClick={() => handleForzarCaducidad(s)} title="[Prueba] Forzar caducidad"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.brass, cursor: 'pointer' }}>
-                      <FlaskConical size={15} style={{ margin: '0 auto' }} />
-                    </button>
                     <button onClick={() => setEditando(s)} title="Editar"
                       style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
                       <Pencil size={15} style={{ margin: '0 auto' }} />
@@ -454,10 +505,18 @@ export default function Admin() {
               Este número cuenta personas registradas (usuarios), no carnets.
             </p>
 
+            {(usuarios || []).length > 3 && (
+              <input style={{ ...inputStyle, marginBottom: 14 }} placeholder="Buscar por usuario..."
+                value={queryUsuarios} onChange={(e) => setQueryUsuarios(e.target.value)} />
+            )}
+
             {usuarios === undefined && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 30 }}>Cargando...</div>}
+            {usuarios !== undefined && usuarios.length > 0 && usuariosFiltrados.length === 0 && (
+              <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center', padding: '6px 0' }}>Ningún resultado.</p>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {(usuarios || []).map((u) => (
+              {usuariosFiltrados.map((u) => (
                 <div key={u.id} style={{
                   background: u.reset_requested ? 'rgba(255,90,31,0.08)' : 'rgba(255,255,255,0.04)',
                   border: `1px solid ${u.reset_requested ? 'rgba(255,90,31,0.4)' : 'rgba(244,246,241,0.1)'}`,
