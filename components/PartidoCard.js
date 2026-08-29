@@ -17,12 +17,25 @@ export function partidoEsPasado(partido) {
   return new Date(`${partido.fecha}T00:00:00`).getTime() < hoy.getTime();
 }
 
+function resultadoInfo(partido) {
+  if (!partido.resultado) return null;
+  const partes = partido.resultado.split('-').map((n) => parseInt(n.trim(), 10));
+  if (partes.length !== 2 || partes.some(isNaN)) return null;
+  const [golesA, golesB] = partes;
+  if (golesA === golesB) return { color: '#FFD24C', texto: 'Empate' };
+  const ganamos = partido.es_local ? golesA > golesB : golesB > golesA;
+  return ganamos ? { color: '#4ADE80', texto: 'Victoria' } : { color: '#ff6b6b', texto: 'Derrota' };
+}
+
 export function PartidoCard({ partido }) {
   const pasado = partidoEsPasado(partido);
+  const info = resultadoInfo(partido);
+
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.12)',
-      borderRadius: 14, padding: '14px 16px', opacity: pasado ? 0.7 : 1,
+      background: 'rgba(255,255,255,0.04)',
+      border: `1px solid ${info ? info.color + '55' : 'rgba(244,246,241,0.12)'}`,
+      borderRadius: 14, padding: '14px 16px', opacity: pasado ? 0.85 : 1,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
         <span style={{
@@ -42,9 +55,13 @@ export function PartidoCard({ partido }) {
         {formatFechaPartido(partido.fecha, partido.hora)}
         {partido.estadio && ` · ${partido.estadio}`}
       </div>
-      {pasado && partido.resultado && (
-        <div style={{ marginTop: 10, display: 'inline-block', background: PALETTE.brass, color: PALETTE.ink, fontFamily: fontStack.heading, fontWeight: 700, fontSize: 15, padding: '3px 12px', borderRadius: 8 }}>
-          {partido.resultado}
+      {info && (
+        <div style={{
+          marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: `${info.color}22`, border: `1px solid ${info.color}`, borderRadius: 8, padding: '4px 12px',
+        }}>
+          <span style={{ color: info.color, fontFamily: fontStack.heading, fontWeight: 800, fontSize: 16 }}>{partido.resultado}</span>
+          <span style={{ color: info.color, fontFamily: fontStack.label, fontWeight: 700, fontSize: 11.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>{info.texto}</span>
         </div>
       )}
     </div>
