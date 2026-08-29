@@ -1,11 +1,11 @@
 import { EditarSocioModal } from '../components/EditarSocioModal';
 import { PartidoModal } from '../components/PartidoModal';
 import { NoticiaModal } from '../components/NoticiaModal';
-import { Pencil, Trash2, Calendar, Plus, Newspaper } from 'lucide-react';
+import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
-import { PALETTE, fontStack } from '../styles/tema';
+import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from '../components/UI';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
 import { formatFechaPartido } from '../components/PartidoCard';
@@ -37,6 +37,9 @@ export default function Admin() {
   const [noticias, setNoticias] = useState(undefined);
   const [editandoNoticia, setEditandoNoticia] = useState(null);
 
+  const [usuarios, setUsuarios] = useState(undefined);
+  const [tempPasswords, setTempPasswords] = useState({});
+
   const cargar = useCallback(async () => {
     if (!sesion) return;
     const { data, error } = await supabase.rpc('admin_listar_socios', { p_admin_id: sesion.id });
@@ -53,14 +56,21 @@ export default function Admin() {
     setNoticias(data || []);
   }, []);
 
+  const cargarUsuarios = useCallback(async () => {
+    if (!sesion) return;
+    const { data, error } = await supabase.rpc('admin_listar_usuarios', { p_admin_id: sesion.id });
+    if (!error) setUsuarios(data || []);
+  }, [sesion]);
+
   useEffect(() => {
     if (!sesion || !sesion.is_admin) return;
     cargar();
     cargarPartidos();
     cargarNoticias();
+    cargarUsuarios();
     const interval = setInterval(cargar, 8000);
     return () => clearInterval(interval);
-  }, [sesion, cargar, cargarPartidos, cargarNoticias]);
+  }, [sesion, cargar, cargarPartidos, cargarNoticias, cargarUsuarios]);
 
   if (sesion === undefined) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
@@ -149,6 +159,21 @@ export default function Admin() {
     cargarNoticias();
   };
 
+  const handleAsignarTemporal = async (u) => {
+    const valor = (tempPasswords[u.id] || '').trim();
+    if (valor.length < 4) return;
+    if (!confirm(`¿Asignar "${valor}" como contraseña temporal de ${u.usuario}? Debes comunicársela tú por otro medio.`)) return;
+    await supabase.rpc('asignar_password_temporal', { p_admin_id: sesion.id, p_id: u.id, p_temp: valor });
+    setTempPasswords((prev) => ({ ...prev, [u.id]: '' }));
+    cargarUsuarios();
+  };
+  const handleToggleAdmin = async (u) => {
+    const mensaje = u.is_admin ? `¿Quitar el acceso de administrador a ${u.usuario}?` : `¿Convertir a ${u.usuario} en administrador?`;
+    if (!confirm(mensaje)) return;
+    await supabase.rpc('admin_toggle_admin', { p_admin_id: sesion.id, p_target_id: u.id });
+    cargarUsuarios();
+  };
+
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '16px 14px 50px' }}>
@@ -166,6 +191,7 @@ export default function Admin() {
           <button onClick={() => setTab('socios')} style={tabPillStyle(tab === 'socios')}>Socios</button>
           <button onClick={() => setTab('calendario')} style={tabPillStyle(tab === 'calendario')}>Calendario</button>
           <button onClick={() => setTab('noticias')} style={tabPillStyle(tab === 'noticias')}>Noticias</button>
+          <button onClick={() => setTab('usuarios')} style={tabPillStyle(tab === 'usuarios')}>Usuarios</button>
         </div>
 
         {socios === undefined && (tab === 'altas' || tab === 'renovaciones' || tab === 'socios') && (
@@ -382,6 +408,56 @@ export default function Admin() {
                     style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
                     <Trash2 size={15} style={{ margin: '0 auto' }} />
                   </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === 'usuarios' && (
+          <div>
+            <h3 style={{ fontFamily: fontStack.heading, fontSize: 16, margin: '0 0 14px', color: PALETTE.chalk }}>
+              Cuentas registradas ({usuarios === undefined ? '…' : usuarios.length})
+            </h3>
+            <p style={{ fontSize: 12, color: 'rgba(244,246,241,0.55)', marginTop: -8, marginBottom: 14, lineHeight: 1.5 }}>
+              Este número cuenta personas registradas (usuarios), no carnets.
+            </p>
+
+            {usuarios === undefined && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 30 }}>Cargando...</div>}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(usuarios || []).map((u) => (
+                <div key={u.id} style={{
+                  background: u.reset_requested ? 'rgba(255,90,31,0.08)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${u.reset_requested ? 'rgba(255,90,31,0.4)' : 'rgba(244,246,241,0.1)'}`,
+                  borderRadius: 12, padding: '12px 14px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>
+                        {u.usuario} {u.is_admin && <span style={{ color: PALETTE.brass, fontSize: 11.5, fontFamily: fontStack.label, fontWeight: 700 }}>· ADMIN</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label }}>
+                        Registrado {formatFecha(u.created_at)}
+                      </div>
+                    </div>
+                    <Button variant={u.is_admin ? 'ghost' : 'brass'} onClick={() => handleToggleAdmin(u)} style={{ padding: '6px 11px', fontSize: 12.5 }}>
+                      {u.is_admin ? 'Quitar admin' : 'Hacer admin'}
+                    </Button>
+                  </div>
+
+                  {u.reset_requested && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,90,31,0.25)' }}>
+                      <div style={{ fontSize: 12.5, color: PALETTE.flare, fontWeight: 700, marginBottom: 8, fontFamily: fontStack.label }}>
+                        ⚠ Ha solicitado recuperar su contraseña
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input style={{ ...inputStyle, flex: 1, padding: '8px 12px', fontSize: 13.5 }} placeholder="Contraseña temporal"
+                          value={tempPasswords[u.id] || ''} onChange={(e) => setTempPasswords((prev) => ({ ...prev, [u.id]: e.target.value }))} />
+                        <Button variant="primary" onClick={() => handleAsignarTemporal(u)} style={{ padding: '8px 12px', fontSize: 12.5 }}>Asignar</Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
