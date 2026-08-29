@@ -1,11 +1,13 @@
 import { EditarSocioModal } from '../components/EditarSocioModal';
-import { Pencil, Trash2 } from 'lucide-react';
+import { PartidoModal } from '../components/PartidoModal';
+import { Pencil, Trash2, Calendar, Plus } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { PALETTE, fontStack } from '../styles/tema';
 import { Button } from '../components/UI';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
+import { formatFechaPartido } from '../components/PartidoCard';
 import { UserPlus, Check, X, Users, RefreshCw, FlaskConical, AlertTriangle } from 'lucide-react';
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
@@ -28,18 +30,27 @@ export default function Admin() {
   const [editando, setEditando] = useState(null);
   const [tab, setTab] = useState('altas');
 
+  const [partidos, setPartidos] = useState(undefined);
+  const [editandoPartido, setEditandoPartido] = useState(null);
+
   const cargar = useCallback(async () => {
     if (!sesion) return;
     const { data, error } = await supabase.rpc('admin_listar_socios', { p_admin_id: sesion.id });
     if (!error) setSocios(data || []);
   }, [sesion]);
 
+  const cargarPartidos = useCallback(async () => {
+    const { data } = await supabase.from('partidos').select('*').order('fecha', { ascending: true, nullsFirst: false });
+    setPartidos(data || []);
+  }, []);
+
   useEffect(() => {
     if (!sesion || !sesion.is_admin) return;
     cargar();
+    cargarPartidos();
     const interval = setInterval(cargar, 8000);
     return () => clearInterval(interval);
-  }, [sesion, cargar]);
+  }, [sesion, cargar, cargarPartidos]);
 
   if (sesion === undefined) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
@@ -116,6 +127,12 @@ export default function Admin() {
     cargar();
   };
 
+  const handleEliminarPartido = async (p) => {
+    if (!confirm(`¿Eliminar el partido contra ${p.rival}?`)) return;
+    await supabase.from('partidos').delete().eq('id', p.id);
+    cargarPartidos();
+  };
+
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '16px 14px 50px' }}>
@@ -123,7 +140,7 @@ export default function Admin() {
           Panel de socios {socios ? `(${resto.length})` : ''}
         </h2>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
           <button onClick={() => setTab('altas')} style={tabPillStyle(tab === 'altas')}>
             Altas {pendientes.length > 0 ? `(${pendientes.length})` : ''}
           </button>
@@ -131,9 +148,10 @@ export default function Admin() {
             Renov. {pendientesPago.length > 0 ? `(${pendientesPago.length})` : ''}
           </button>
           <button onClick={() => setTab('socios')} style={tabPillStyle(tab === 'socios')}>Socios</button>
+          <button onClick={() => setTab('calendario')} style={tabPillStyle(tab === 'calendario')}>Calendario</button>
         </div>
 
-        {socios === undefined && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 40 }}>Cargando...</div>}
+        {socios === undefined && tab !== 'calendario' && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 40 }}>Cargando...</div>}
 
         {socios !== undefined && tab === 'altas' && (
           pendientes.length === 0 ? (
@@ -266,10 +284,56 @@ export default function Admin() {
             </div>
           </>
         )}
+
+        {tab === 'calendario' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 style={{ fontFamily: fontStack.heading, fontSize: 16, margin: 0, color: PALETTE.chalk }}>
+                Calendario ({partidos === undefined ? '…' : partidos.length})
+              </h3>
+              <Button variant="brass" onClick={() => setEditandoPartido({})} style={{ padding: '7px 12px', fontSize: 13 }}>
+                <Plus size={15} /> Añadir
+              </Button>
+            </div>
+
+            {partidos === undefined && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 30 }}>Cargando...</div>}
+
+            {partidos !== undefined && partidos.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.55)' }}>
+                <Calendar size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <p>Todavía no has añadido ningún partido.</p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(partidos || []).map((p) => (
+                <div key={p.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{p.es_local ? '🏠' : '✈️'} vs {p.rival}</div>
+                    <div style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
+                      {formatFechaPartido(p.fecha, p.hora)}{p.jornada ? ` · Jornada ${p.jornada}` : ''}{p.resultado ? ` · ${p.resultado}` : ''}
+                    </div>
+                  </div>
+                  <button onClick={() => setEditandoPartido(p)} title="Editar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                    <Pencil size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                  <button onClick={() => handleEliminarPartido(p)} title="Eliminar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
+                    <Trash2 size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {editando && (
         <EditarSocioModal socio={editando} adminId={sesion.id} onClose={() => setEditando(null)} onSaved={() => { setEditando(null); cargar(); }} />
+      )}
+      {editandoPartido && (
+        <PartidoModal partido={editandoPartido} onClose={() => setEditandoPartido(null)} onSaved={() => { setEditandoPartido(null); cargarPartidos(); }} />
       )}
     </Layout>
   );
