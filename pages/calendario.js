@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
+import { LoadingCrest } from '../components/LoadingCrest';
 import { PALETTE, fontStack } from '../styles/tema';
 import { PartidoCard, partidoEsPasado } from '../components/PartidoCard';
 import { Calendar } from 'lucide-react';
@@ -21,7 +22,11 @@ export default function CalendarioPage() {
   }, [cargar]);
 
   if (sesion === undefined) {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingCrest texto="Cargando..." />
+      </div>
+    );
   }
 
   const proximos = (partidos || []).filter((p) => !partidoEsPasado(p));
@@ -37,7 +42,9 @@ export default function CalendarioPage() {
 
         <h3 style={{ fontFamily: fontStack.heading, fontSize: 15, color: PALETTE.chalk, margin: '0 0 12px' }}>Próximos partidos</h3>
         {partidos === undefined ? (
-          <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 20 }}>Cargando...</div>
+          <div style={{ padding: '20px 0', display: 'flex', justifyContent: 'center' }}>
+            <LoadingCrest texto="Cargando partidos..." />
+          </div>
         ) : proximos.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)', marginBottom: 24 }}>
             <Calendar size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
