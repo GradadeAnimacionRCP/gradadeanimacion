@@ -83,7 +83,8 @@ export default function Carnets() {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff8a8a', fontFamily: fontStack.label }}>No se pudo comprobar tu sesión.</div>;
   }
 
-  return (
+    return (
+    <Layout sesion={sesion}>
       <div style={{ padding: '18px 16px 40px' }}>
         {socios !== undefined && socios.length > 0 && (
           <div style={{ display: 'flex', gap: 8, maxWidth: 380, margin: '0 auto 22px' }}>
