@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { PALETTE, fontStack } from '../styles/tema';
 import { Button } from '../components/UI';
-import { RefreshCw as IconTraspaso } from 'lucide-react';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
 import { UserPlus, Check, X, Users, RefreshCw, FlaskConical, AlertTriangle } from 'lucide-react';
 
@@ -55,12 +54,13 @@ export default function Admin() {
 
   const pendientes = (socios || []).filter((s) => s.estado_solicitud === 'pendiente');
   const pendientesPago = (socios || []).filter((s) => s.estado_solicitud === 'aprobado' && estadoMember(s) === 'caducado');
-    const traspasos = (socios || []).filter((s) => s.traspaso_cuenta_destino);
+  const traspasos = (socios || []).filter((s) => s.traspaso_cuenta_destino);
   const resto = (socios || []).filter((s) =>
     s.estado_solicitud !== 'pendiente' &&
     !(s.estado_solicitud === 'aprobado' && estadoMember(s) === 'caducado') &&
     !s.traspaso_cuenta_destino
   );
+
   const handleAprobar = async (s) => {
     setProcesando(s.id);
     await supabase.rpc('aprobar_socio', { p_admin_id: sesion.id, p_id: s.id, p_tipo: tipoSeleccion[s.id] || 'General' });
@@ -115,6 +115,7 @@ export default function Admin() {
     setProcesando(null);
     cargar();
   };
+
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '16px 14px 50px' }}>
@@ -201,7 +202,8 @@ export default function Admin() {
         )}
 
         {socios !== undefined && tab === 'socios' && (
-                      {traspasos.length > 0 && (
+          <>
+            {traspasos.length > 0 && (
               <div style={{ background: 'rgba(30,120,220,0.08)', border: '1px solid rgba(80,150,255,0.4)', borderRadius: 14, padding: 14, marginBottom: 20 }}>
                 <h3 style={{ fontFamily: fontStack.heading, fontSize: 15.5, margin: '0 0 8px', color: PALETTE.chalk }}>
                   Solicitudes de traspaso ({traspasos.length})
@@ -229,44 +231,46 @@ export default function Admin() {
                 </div>
               </div>
             )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {resto.map((s) => {
-              const est = estadoMember(s);
-              const rechazado = s.estado_solicitud === 'rechazado';
-              return (
-                <div key={s.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <Users size={18} opacity={0.5} />
-                  <div style={{ flex: 1, minWidth: 140 }}>
-                    <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{s.nombre} {s.apellidos}</div>
-                    <div style={{ fontSize: 12.5, color: rechazado ? '#ff8a8a' : ESTADO_COLOR[est], fontFamily: fontStack.label, fontWeight: 700 }}>
-                      {formatNumeroSocio(s.numero_socio)} · {rechazado ? 'Rechazado' : ESTADO_LABEL[est]}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {resto.map((s) => {
+                const est = estadoMember(s);
+                const rechazado = s.estado_solicitud === 'rechazado';
+                return (
+                  <div key={s.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <Users size={18} opacity={0.5} />
+                    <div style={{ flex: 1, minWidth: 140 }}>
+                      <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{s.nombre} {s.apellidos}</div>
+                      <div style={{ fontSize: 12.5, color: rechazado ? '#ff8a8a' : ESTADO_COLOR[est], fontFamily: fontStack.label, fontWeight: 700 }}>
+                        {formatNumeroSocio(s.numero_socio)} · {rechazado ? 'Rechazado' : ESTADO_LABEL[est]}
+                      </div>
                     </div>
+                    <button onClick={() => handleForzarCaducidad(s)} title="[Prueba] Forzar caducidad"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.brass, cursor: 'pointer' }}>
+                      <FlaskConical size={15} style={{ margin: '0 auto' }} />
+                    </button>
+                    <button onClick={() => setEditando(s)} title="Editar"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                      <Pencil size={15} style={{ margin: '0 auto' }} />
+                    </button>
+                    <button onClick={() => handleToggleActivo(s)} title="Activar/Suspender"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                      {s.activo === false ? <Check size={15} style={{ margin: '0 auto' }} /> : <AlertTriangle size={15} style={{ margin: '0 auto' }} />}
+                    </button>
+                    <button onClick={() => handleEliminar(s)} title="Eliminar"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
+                      <Trash2 size={15} style={{ margin: '0 auto' }} />
+                    </button>
                   </div>
-                                    <button onClick={() => handleForzarCaducidad(s)} title="[Prueba] Forzar caducidad"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.brass, cursor: 'pointer' }}>
-                    <FlaskConical size={15} style={{ margin: '0 auto' }} />
-                  </button>
-                  <button onClick={() => setEditando(s)} title="Editar"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
-                    <Pencil size={15} style={{ margin: '0 auto' }} />
-                  </button>
-                  <button onClick={() => handleToggleActivo(s)} title="Activar/Suspender"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
-                    {s.activo === false ? <Check size={15} style={{ margin: '0 auto' }} /> : <AlertTriangle size={15} style={{ margin: '0 auto' }} />}
-                  </button>
-                  <button onClick={() => handleEliminar(s)} title="Eliminar"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
-                    <Trash2 size={15} style={{ margin: '0 auto' }} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
-                {editando && (
-          <EditarSocioModal socio={editando} adminId={sesion.id} onClose={() => setEditando(null)} onSaved={() => { setEditando(null); cargar(); }} />
-        )}
+
+      {editando && (
+        <EditarSocioModal socio={editando} adminId={sesion.id} onClose={() => setEditando(null)} onSaved={() => { setEditando(null); cargar(); }} />
+      )}
     </Layout>
   );
 }
