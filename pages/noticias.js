@@ -3,25 +3,44 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { PALETTE, fontStack } from '../styles/tema';
 import { NoticiaCard } from '../components/NoticiaCard';
-import { Facebook, Instagram, Newspaper } from 'lucide-react';
+import { ProductoCard } from '../components/ProductoCard';
+import { Facebook, Instagram, Newspaper, ShoppingBag } from 'lucide-react';
 
 const FACEBOOK_URL = 'https://www.facebook.com/GradaDeAnimacionRCP/';
 const INSTAGRAM_URL = 'https://www.instagram.com/gradadeanimacionrcp?igsi=MXFwazRhaHpsbTlmaw==';
 
+function tabPillStyle(active) {
+  return {
+    flex: 1, padding: '10px 0', borderRadius: 10,
+    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
+    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
+    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  };
+}
+
 export default function NoticiasPage() {
   const sesion = useSesion();
+  const [vista, setVista] = useState('noticias');
   const [noticias, setNoticias] = useState(undefined);
+  const [productos, setProductos] = useState(undefined);
 
-  const cargar = useCallback(async () => {
+  const cargarNoticias = useCallback(async () => {
     const { data } = await supabase.from('noticias').select('*').order('fecha', { ascending: false });
     setNoticias(data || []);
   }, []);
 
+  const cargarProductos = useCallback(async () => {
+    const { data } = await supabase.from('productos').select('*').order('fecha', { ascending: false });
+    setProductos(data || []);
+  }, []);
+
   useEffect(() => {
-    cargar();
-    const interval = setInterval(cargar, 15000);
+    cargarNoticias();
+    cargarProductos();
+    const interval = setInterval(() => { cargarNoticias(); cargarProductos(); }, 15000);
     return () => clearInterval(interval);
-  }, [cargar]);
+  }, [cargarNoticias, cargarProductos]);
 
   if (sesion === undefined) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
@@ -52,21 +71,43 @@ export default function NoticiasPage() {
           </a>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 700 }}>
-          <Newspaper size={15} /> Tablón de la grada
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          <button onClick={() => setVista('noticias')} style={tabPillStyle(vista === 'noticias')}>
+            <Newspaper size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} /> Noticias
+          </button>
+          <button onClick={() => setVista('tienda')} style={tabPillStyle(vista === 'tienda')}>
+            <ShoppingBag size={14} style={{ verticalAlign: 'middle', marginRight: 5 }} /> Tienda
+          </button>
         </div>
 
-        {noticias === undefined ? (
-          <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 20 }}>Cargando...</div>
-        ) : noticias.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
-            <Newspaper size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
-            <p style={{ fontSize: 13.5 }}>Todavía no hay publicaciones. ¡Vuelve pronto!</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {noticias.map((n) => <NoticiaCard key={n.id} noticia={n} />)}
-          </div>
+        {vista === 'noticias' && (
+          noticias === undefined ? (
+            <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 20 }}>Cargando...</div>
+          ) : noticias.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
+              <Newspaper size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+              <p style={{ fontSize: 13.5 }}>Todavía no hay publicaciones. ¡Vuelve pronto!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {noticias.map((n) => <NoticiaCard key={n.id} noticia={n} />)}
+            </div>
+          )
+        )}
+
+        {vista === 'tienda' && (
+          productos === undefined ? (
+            <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 20 }}>Cargando...</div>
+          ) : productos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
+              <ShoppingBag size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+              <p style={{ fontSize: 13.5 }}>Todavía no hay productos a la venta.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {productos.map((p) => <ProductoCard key={p.id} producto={p} />)}
+            </div>
+          )
         )}
       </div>
     </Layout>
