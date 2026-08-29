@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
+import { useConfirm } from '../components/ConfirmModal';
 import { PALETTE, fontStack } from '../styles/tema';
 import { Button } from '../components/UI';
 import { CarnetCard } from '../components/CarnetCard';
@@ -44,7 +45,7 @@ function PendienteAprobacion({ socio, onQuitar }) {
   );
 }
 
-function TarjetaSocio({ socio, cuentaId, onCambio }) {
+function TarjetaSocio({ socio, cuentaId, onCambio, confirm }) {
   const estado = solicitudEstado(socio);
   const est = estadoMember(socio);
 
@@ -55,7 +56,7 @@ function TarjetaSocio({ socio, cuentaId, onCambio }) {
   const fileRef = useRef(null);
 
   const handleQuitar = async () => {
-    if (!confirm(`¿Quitar el carnet ${formatNumeroSocio(socio.numero_socio)} de tu cuenta?`)) return;
+    if (!(await confirm(`¿Quitar el carnet ${formatNumeroSocio(socio.numero_socio)} de tu cuenta?`))) return;
     await supabase.rpc('desvincular_socio', { p_cuenta_id: cuentaId, p_id: socio.id });
     onCambio();
   };
@@ -75,7 +76,7 @@ function TarjetaSocio({ socio, cuentaId, onCambio }) {
   const handleEnviarRenovacion = async () => {
     setErrorRenovacion('');
     if (!comprobante) {
-      if (!confirm('¿Estás seguro de enviar la solicitud de renovación sin adjuntar el comprobante de pago?')) return;
+      if (!(await confirm('¿Estás seguro de enviar la solicitud de renovación sin adjuntar el comprobante de pago?'))) return;
     }
     setEnviando(true);
     const { error } = await supabase.rpc('solicitar_renovacion', { p_cuenta_id: cuentaId, p_id: socio.id, p_comprobante: comprobante });
@@ -167,6 +168,7 @@ function TarjetaSocio({ socio, cuentaId, onCambio }) {
 
 export default function Carnets() {
   const sesion = useSesion();
+  const [confirm, ConfirmUI] = useConfirm();
   const [socios, setSocios] = useState(undefined);
   const [vista, setVista] = useState('actuales');
 
@@ -191,6 +193,7 @@ export default function Carnets() {
 
   return (
     <Layout sesion={sesion}>
+      {ConfirmUI}
       <div style={{ padding: '18px 16px 40px' }}>
         {socios !== undefined && socios.length > 0 && (
           <div style={{ display: 'flex', gap: 8, maxWidth: 380, margin: '0 auto 22px' }}>
@@ -221,7 +224,7 @@ export default function Carnets() {
         ) : vista === 'actuales' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
             {socios.map((s) => (
-              <TarjetaSocio key={s.id} socio={s} cuentaId={sesion.id} onCambio={() => cargar(sesion.id)} />
+              <TarjetaSocio key={s.id} socio={s} cuentaId={sesion.id} onCambio={() => cargar(sesion.id)} confirm={confirm} />
             ))}
           </div>
         ) : (
