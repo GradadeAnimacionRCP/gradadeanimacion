@@ -1,3 +1,5 @@
+import { EditarSocioModal } from '../components/EditarSocioModal';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
@@ -23,6 +25,7 @@ export default function Admin() {
   const [socios, setSocios] = useState(undefined);
   const [tipoSeleccion, setTipoSeleccion] = useState({});
   const [procesando, setProcesando] = useState(null);
+  const [editando, setEditando] = useState(null);
   const [tab, setTab] = useState('altas');
 
   const cargar = useCallback(async () => {
@@ -80,7 +83,19 @@ export default function Admin() {
     setProcesando(null);
     cargar();
   };
-
+  const handleToggleActivo = async (s) => {
+    setProcesando(s.id);
+    await supabase.rpc('admin_toggle_activo', { p_admin_id: sesion.id, p_id: s.id });
+    setProcesando(null);
+    cargar();
+  };
+  const handleEliminar = async (s) => {
+    if (!confirm(`¿Eliminar el carnet ${formatNumeroSocio(s.numero_socio)} (${s.nombre} ${s.apellidos})? Esta acción no se puede deshacer.`)) return;
+    setProcesando(s.id);
+    await supabase.rpc('admin_eliminar_socio', { p_admin_id: sesion.id, p_id: s.id });
+    setProcesando(null);
+    cargar();
+  };
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '16px 14px 50px' }}>
@@ -180,9 +195,21 @@ export default function Admin() {
                       {formatNumeroSocio(s.numero_socio)} · {rechazado ? 'Rechazado' : ESTADO_LABEL[est]}
                     </div>
                   </div>
-                  <button onClick={() => handleForzarCaducidad(s)} title="[Prueba] Forzar caducidad"
+                                    <button onClick={() => handleForzarCaducidad(s)} title="[Prueba] Forzar caducidad"
                     style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.brass, cursor: 'pointer' }}>
                     <FlaskConical size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                  <button onClick={() => setEditando(s)} title="Editar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                    <Pencil size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                  <button onClick={() => handleToggleActivo(s)} title="Activar/Suspender"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                    {s.activo === false ? <Check size={15} style={{ margin: '0 auto' }} /> : <AlertTriangle size={15} style={{ margin: '0 auto' }} />}
+                  </button>
+                  <button onClick={() => handleEliminar(s)} title="Eliminar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
+                    <Trash2 size={15} style={{ margin: '0 auto' }} />
                   </button>
                 </div>
               );
@@ -190,6 +217,9 @@ export default function Admin() {
           </div>
         )}
       </div>
+                {editando && (
+          <EditarSocioModal socio={editando} adminId={sesion.id} onClose={() => setEditando(null)} onSaved={() => { setEditando(null); cargar(); }} />
+        )}
     </Layout>
   );
 }
