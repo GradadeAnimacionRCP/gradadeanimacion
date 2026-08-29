@@ -1,6 +1,7 @@
 import { EditarSocioModal } from '../components/EditarSocioModal';
 import { PartidoModal } from '../components/PartidoModal';
 import { NoticiaModal } from '../components/NoticiaModal';
+import { PanelTemporada } from '../components/PanelTemporada';
 import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
@@ -192,6 +193,7 @@ export default function Admin() {
           <button onClick={() => setTab('calendario')} style={tabPillStyle(tab === 'calendario')}>Calendario</button>
           <button onClick={() => setTab('noticias')} style={tabPillStyle(tab === 'noticias')}>Noticias</button>
           <button onClick={() => setTab('usuarios')} style={tabPillStyle(tab === 'usuarios')}>Usuarios</button>
+          <button onClick={() => setTab('temporada')} style={tabPillStyle(tab === 'temporada')}>Temporada</button>
         </div>
 
         {socios === undefined && (tab === 'altas' || tab === 'renovaciones' || tab === 'socios') && (
@@ -463,6 +465,8 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {tab === 'temporada' && <PanelTemporada />}
       </div>
 
       {editando && (
