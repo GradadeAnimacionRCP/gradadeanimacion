@@ -7,3 +7,18 @@ html, body {
   background: #160305;
   overflow-x: hidden;
 }
+
+@keyframes gda-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes gda-pulse-ring {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50% { opacity: 0.9; transform: scale(1.1); }
+}
+.gda-loading-spin {
+  animation: gda-spin 1.8s linear infinite;
+}
+.gda-loading-pulse {
+  animation: gda-pulse-ring 1.8s ease-in-out infinite;
+}
