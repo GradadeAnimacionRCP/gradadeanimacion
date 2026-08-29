@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
+import { Eye, EyeOff } from 'lucide-react';
 
 export function Button({ children, variant = 'primary', style, ...props }) {
   const variantes = {
@@ -42,6 +44,35 @@ export function Field({ label, children }) {
       </div>
       {children}
     </div>
+  );
+}
+
+export function CampoPassword({ label, value, onChange, autoComplete }) {
+  const [ver, setVer] = useState(false);
+  return (
+    <Field label={label}>
+      <div style={{ position: 'relative' }}>
+        <input
+          type={ver ? 'text' : 'password'}
+          style={{ ...inputStyle, paddingRight: 44 }}
+          value={value}
+          onChange={onChange}
+          autoComplete={autoComplete}
+        />
+        <button
+          type="button"
+          onClick={() => setVer((v) => !v)}
+          style={{
+            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: 6,
+            color: 'rgba(244,246,241,0.6)', display: 'flex', alignItems: 'center',
+          }}
+          aria-label={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        >
+          {ver ? <EyeOff size={19} /> : <Eye size={19} />}
+        </button>
+      </div>
+    </Field>
   );
 }
 
