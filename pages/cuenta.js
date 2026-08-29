@@ -9,7 +9,7 @@ import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field, CampoPassword } from '../components/UI';
 import { LogOut, Bell } from 'lucide-react';
 
-const CLAVE_MAESTRA = 'CAMBIA-ESTA-CLAVE-2027'; // debe coincidir con la que pusiste en la base de datos
+const CLAVE_MAESTRA = 'gradacereceda2026'; // debe coincidir con la que pusiste en la base de datos
 
 export default function CuentaPage() {
   const sesion = useSesion();
