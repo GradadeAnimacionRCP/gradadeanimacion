@@ -52,8 +52,7 @@ export default function Inicio() {
   const [totalSocios, setTotalSocios] = useState(null);
 
   useEffect(() => {
-    supabase.from('socios').select('id', { count: 'exact', head: true }).eq('estado_solicitud', 'aprobado')
-      .then(({ count }) => setTotalSocios(count));
+    supabase.rpc('contar_socios_aprobados').then(({ data }) => setTotalSocios(data));
   }, []);
 
   if (!sesion) return null;
