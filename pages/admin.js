@@ -1,9 +1,10 @@
 import { EditarSocioModal } from '../components/EditarSocioModal';
 import { PartidoModal } from '../components/PartidoModal';
 import { NoticiaModal } from '../components/NoticiaModal';
+import { ProductoModal } from '../components/ProductoModal';
 import { PanelTemporada } from '../components/PanelTemporada';
 import { useConfirm } from '../components/ConfirmModal';
-import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck, Camera } from 'lucide-react';
+import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck, Camera, ShoppingBag } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
@@ -36,6 +37,9 @@ export default function Admin() {
   const [noticias, setNoticias] = useState(undefined);
   const [editandoNoticia, setEditandoNoticia] = useState(null);
 
+  const [productos, setProductos] = useState(undefined);
+  const [editandoProducto, setEditandoProducto] = useState(null);
+
   const [usuarios, setUsuarios] = useState(undefined);
   const [tempPasswords, setTempPasswords] = useState({});
 
@@ -65,6 +69,11 @@ export default function Admin() {
     setNoticias(data || []);
   }, []);
 
+  const cargarProductos = useCallback(async () => {
+    const { data } = await supabase.from('productos').select('*').order('fecha', { ascending: false });
+    setProductos(data || []);
+  }, []);
+
   const cargarUsuarios = useCallback(async () => {
     if (!sesion) return;
     const { data, error } = await supabase.rpc('admin_listar_usuarios', { p_admin_id: sesion.id });
@@ -76,10 +85,11 @@ export default function Admin() {
     cargar();
     cargarPartidos();
     cargarNoticias();
+    cargarProductos();
     cargarUsuarios();
     const interval = setInterval(cargar, 8000);
     return () => clearInterval(interval);
-  }, [sesion, cargar, cargarPartidos, cargarNoticias, cargarUsuarios]);
+  }, [sesion, cargar, cargarPartidos, cargarNoticias, cargarProductos, cargarUsuarios]);
 
   if (sesion === undefined) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
@@ -113,6 +123,7 @@ export default function Admin() {
     { id: 'socios', label: 'Socios', icon: Users, badge: traspasos.length },
     { id: 'calendario', label: 'Calendario', icon: Calendar, badge: 0 },
     { id: 'noticias', label: 'Noticias', icon: Newspaper, badge: 0 },
+    { id: 'tienda', label: 'Tienda', icon: ShoppingBag, badge: 0 },
     { id: 'usuarios', label: 'Usuarios', icon: UserCog, badge: (usuarios || []).filter((u) => u.reset_requested).length },
     { id: 'temporada', label: 'Temporada', icon: Camera, badge: 0 },
     { id: 'verificar', label: 'Comprobar', icon: ShieldCheck, badge: 0 },
@@ -176,6 +187,12 @@ export default function Admin() {
     if (!(await confirm(`¿Eliminar la noticia "${n.titulo}"?`))) return;
     await supabase.from('noticias').delete().eq('id', n.id);
     cargarNoticias();
+  };
+
+  const handleEliminarProducto = async (p) => {
+    if (!(await confirm(`¿Eliminar el producto "${p.nombre}"?`))) return;
+    await supabase.from('productos').delete().eq('id', p.id);
+    cargarProductos();
   };
 
   const handleAsignarTemporal = async (u) => {
@@ -499,6 +516,49 @@ export default function Admin() {
           </div>
         )}
 
+        {tab === 'tienda' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 style={{ fontFamily: fontStack.heading, fontSize: 16, margin: 0, color: PALETTE.chalk }}>
+                Productos ({productos === undefined ? '…' : productos.length})
+              </h3>
+              <Button variant="brass" onClick={() => setEditandoProducto({})} style={{ padding: '7px 12px', fontSize: 13 }}>
+                <Plus size={15} /> Añadir
+              </Button>
+            </div>
+
+            {productos === undefined && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 30 }}>Cargando...</div>}
+            {productos !== undefined && productos.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.55)' }}>
+                <ShoppingBag size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <p>Todavía no has añadido ningún producto.</p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(productos || []).map((p) => (
+                <div key={p.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {p.imagen && <img src={p.imagen} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, filter: p.agotado ? 'grayscale(1)' : 'none' }} />}
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>
+                      {p.nombre} {p.agotado && <span style={{ color: '#ff8a8a', fontSize: 11.5, fontFamily: fontStack.label, fontWeight: 700 }}>· AGOTADO</span>}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700 }}>{Number(p.precio).toFixed(2)} €</div>
+                  </div>
+                  <button onClick={() => setEditandoProducto(p)} title="Editar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                    <Pencil size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                  <button onClick={() => handleEliminarProducto(p)} title="Eliminar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
+                    <Trash2 size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {tab === 'usuarios' && (
           <div>
             <h3 style={{ fontFamily: fontStack.heading, fontSize: 16, margin: '0 0 14px', color: PALETTE.chalk }}>
@@ -598,6 +658,9 @@ export default function Admin() {
       )}
       {editandoNoticia && (
         <NoticiaModal noticia={editandoNoticia} onClose={() => setEditandoNoticia(null)} onSaved={() => { setEditandoNoticia(null); cargarNoticias(); }} />
+      )}
+      {editandoProducto && (
+        <ProductoModal producto={editandoProducto} onClose={() => setEditandoProducto(null)} onSaved={() => { setEditandoProducto(null); cargarProductos(); }} />
       )}
       {imagenAmpliada && (
         <div onClick={() => setImagenAmpliada(null)} style={{
