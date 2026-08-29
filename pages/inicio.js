@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
@@ -48,6 +48,13 @@ export default function Inicio() {
   const [busError, setBusError] = useState('');
   const [busInfo, setBusInfo] = useState('');
   const [busCargando, setBusCargando] = useState(false);
+
+  const [totalSocios, setTotalSocios] = useState(null);
+
+  useEffect(() => {
+    supabase.from('socios').select('id', { count: 'exact', head: true }).eq('estado_solicitud', 'aprobado')
+      .then(({ count }) => setTotalSocios(count));
+  }, []);
 
   if (!sesion) return null;
 
@@ -109,6 +116,16 @@ export default function Inicio() {
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '18px 16px 40px' }}>
+        {totalSocios !== null && totalSocios > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 18,
+            background: 'rgba(201,162,75,0.12)', border: '1px solid rgba(201,162,75,0.35)', borderRadius: 999,
+            padding: '8px 16px', fontFamily: fontStack.label, fontSize: 13, fontWeight: 700, color: PALETTE.brass,
+          }}>
+            Ya somos {totalSocios} {totalSocios === 1 ? 'socio' : 'socios'}
+          </div>
+        )}
+
         {cropSrc && (
           <CropModal src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={(dataUrl) => { setFoto(dataUrl); setCropSrc(null); }} />
         )}
