@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
+import { LoadingCrest } from '../components/LoadingCrest';
 import { PALETTE, fontStack } from '../styles/tema';
 import { NoticiaCard } from '../components/NoticiaCard';
 import { ProductoCard } from '../components/ProductoCard';
@@ -43,7 +44,11 @@ export default function NoticiasPage() {
   }, [cargarNoticias, cargarProductos]);
 
   if (sesion === undefined) {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingCrest texto="Cargando..." />
+      </div>
+    );
   }
 
   return (
@@ -82,7 +87,9 @@ export default function NoticiasPage() {
 
         {vista === 'noticias' && (
           noticias === undefined ? (
-            <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 20 }}>Cargando...</div>
+            <div style={{ padding: '20px 0', display: 'flex', justifyContent: 'center' }}>
+              <LoadingCrest texto="Cargando noticias..." />
+            </div>
           ) : noticias.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
               <Newspaper size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
@@ -97,7 +104,9 @@ export default function NoticiasPage() {
 
         {vista === 'tienda' && (
           productos === undefined ? (
-            <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 20 }}>Cargando...</div>
+            <div style={{ padding: '20px 0', display: 'flex', justifyContent: 'center' }}>
+              <LoadingCrest texto="Cargando productos..." />
+            </div>
           ) : productos.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
               <ShoppingBag size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
