@@ -62,6 +62,7 @@ function TarjetaSocio({ socio, cuentaId, onCambio }) {
 export default function Carnets() {
   const sesion = useSesion();
   const [socios, setSocios] = useState(undefined);
+  const [vista, setVista] = useState('actuales');
 
   const cargar = useCallback(async (cuentaId) => {
     const { data, error } = await supabase.rpc('mis_socios', { p_cuenta_id: cuentaId });
@@ -83,8 +84,26 @@ export default function Carnets() {
   }
 
   return (
-    <Layout sesion={sesion}>
       <div style={{ padding: '18px 16px 40px' }}>
+        {socios !== undefined && socios.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, maxWidth: 380, margin: '0 auto 22px' }}>
+            <button onClick={() => setVista('actuales')} style={{
+              flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer',
+              border: `1px solid ${vista === 'actuales' ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+              background: vista === 'actuales' ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
+              color: vista === 'actuales' ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
+              fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
+            }}>Abonos actuales</button>
+            <button onClick={() => setVista('antiguos')} style={{
+              flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer',
+              border: `1px solid ${vista === 'antiguos' ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+              background: vista === 'antiguos' ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
+              color: vista === 'antiguos' ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
+              fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
+            }}>Abonos antiguos</button>
+          </div>
+        )}
+
         {socios === undefined ? (
           <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 40 }}>Cargando tus carnets...</div>
         ) : socios.length === 0 ? (
@@ -92,11 +111,28 @@ export default function Carnets() {
             <CreditCard size={40} style={{ opacity: 0.4, marginBottom: 12 }} />
             <p>Todavía no tienes ningún carnet en tu cuenta.</p>
           </div>
-        ) : (
+        ) : vista === 'actuales' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
             {socios.map((s) => (
               <TarjetaSocio key={s.id} socio={s} cuentaId={sesion.id} onCambio={() => cargar(sesion.id)} />
             ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+            {socios.flatMap((s) => (s.historial_abonos || [])).length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.6)' }}>
+                <p>Todavía no tienes abonos de temporadas anteriores.</p>
+              </div>
+            ) : (
+              socios.flatMap((s) =>
+                (s.historial_abonos || []).map((abono, idx) => (
+                  <CarnetCard key={`${s.id}-${idx}`} socio={{
+                    numero_socio: abono.numeroSocio, nombre: s.nombre, apellidos: s.apellidos,
+                    foto: abono.foto, fecha_alta: abono.fechaAlta, fecha_caducidad: abono.fechaCaducidad, tipo: abono.tipo,
+                  }} />
+                ))
+              )
+            )}
           </div>
         )}
       </div>
