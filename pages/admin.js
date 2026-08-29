@@ -1,6 +1,7 @@
 import { EditarSocioModal } from '../components/EditarSocioModal';
 import { PartidoModal } from '../components/PartidoModal';
-import { Pencil, Trash2, Calendar, Plus } from 'lucide-react';
+import { NoticiaModal } from '../components/NoticiaModal';
+import { Pencil, Trash2, Calendar, Plus, Newspaper } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
@@ -33,6 +34,9 @@ export default function Admin() {
   const [partidos, setPartidos] = useState(undefined);
   const [editandoPartido, setEditandoPartido] = useState(null);
 
+  const [noticias, setNoticias] = useState(undefined);
+  const [editandoNoticia, setEditandoNoticia] = useState(null);
+
   const cargar = useCallback(async () => {
     if (!sesion) return;
     const { data, error } = await supabase.rpc('admin_listar_socios', { p_admin_id: sesion.id });
@@ -44,13 +48,19 @@ export default function Admin() {
     setPartidos(data || []);
   }, []);
 
+  const cargarNoticias = useCallback(async () => {
+    const { data } = await supabase.from('noticias').select('*').order('fecha', { ascending: false });
+    setNoticias(data || []);
+  }, []);
+
   useEffect(() => {
     if (!sesion || !sesion.is_admin) return;
     cargar();
     cargarPartidos();
+    cargarNoticias();
     const interval = setInterval(cargar, 8000);
     return () => clearInterval(interval);
-  }, [sesion, cargar, cargarPartidos]);
+  }, [sesion, cargar, cargarPartidos, cargarNoticias]);
 
   if (sesion === undefined) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
@@ -133,6 +143,12 @@ export default function Admin() {
     cargarPartidos();
   };
 
+  const handleEliminarNoticia = async (n) => {
+    if (!confirm(`¿Eliminar la noticia "${n.titulo}"?`)) return;
+    await supabase.from('noticias').delete().eq('id', n.id);
+    cargarNoticias();
+  };
+
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '16px 14px 50px' }}>
@@ -149,9 +165,12 @@ export default function Admin() {
           </button>
           <button onClick={() => setTab('socios')} style={tabPillStyle(tab === 'socios')}>Socios</button>
           <button onClick={() => setTab('calendario')} style={tabPillStyle(tab === 'calendario')}>Calendario</button>
+          <button onClick={() => setTab('noticias')} style={tabPillStyle(tab === 'noticias')}>Noticias</button>
         </div>
 
-        {socios === undefined && tab !== 'calendario' && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 40 }}>Cargando...</div>}
+        {socios === undefined && (tab === 'altas' || tab === 'renovaciones' || tab === 'socios') && (
+          <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 40 }}>Cargando...</div>
+        )}
 
         {socios !== undefined && tab === 'altas' && (
           pendientes.length === 0 ? (
@@ -327,6 +346,47 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {tab === 'noticias' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 style={{ fontFamily: fontStack.heading, fontSize: 16, margin: 0, color: PALETTE.chalk }}>
+                Noticias ({noticias === undefined ? '…' : noticias.length})
+              </h3>
+              <Button variant="brass" onClick={() => setEditandoNoticia({})} style={{ padding: '7px 12px', fontSize: 13 }}>
+                <Plus size={15} /> Publicar
+              </Button>
+            </div>
+
+            {noticias === undefined && <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 30 }}>Cargando...</div>}
+            {noticias !== undefined && noticias.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.55)' }}>
+                <Newspaper size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+                <p>Todavía no has publicado ninguna noticia.</p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(noticias || []).map((n) => (
+                <div key={n.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {n.imagen && <img src={n.imagen} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8 }} />}
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{n.titulo}</div>
+                    <div style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>{formatFecha(n.fecha)}</div>
+                  </div>
+                  <button onClick={() => setEditandoNoticia(n)} title="Editar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                    <Pencil size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                  <button onClick={() => handleEliminarNoticia(n)} title="Eliminar"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
+                    <Trash2 size={15} style={{ margin: '0 auto' }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {editando && (
@@ -334,6 +394,9 @@ export default function Admin() {
       )}
       {editandoPartido && (
         <PartidoModal partido={editandoPartido} onClose={() => setEditandoPartido(null)} onSaved={() => { setEditandoPartido(null); cargarPartidos(); }} />
+      )}
+      {editandoNoticia && (
+        <NoticiaModal noticia={editandoNoticia} onClose={() => setEditandoNoticia(null)} onSaved={() => { setEditandoNoticia(null); cargarNoticias(); }} />
       )}
     </Layout>
   );
