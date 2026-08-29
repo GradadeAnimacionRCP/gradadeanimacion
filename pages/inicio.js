@@ -4,7 +4,7 @@ import { useSesion, Layout } from '../components/Layout';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field } from '../components/UI';
 import { CropModal } from '../components/CropModal';
-import { UserPlus, Search, Camera } from 'lucide-react';
+import { UserPlus, Search, Camera, Users } from 'lucide-react';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -115,20 +115,41 @@ export default function Inicio() {
 
   return (
     <Layout sesion={sesion}>
-      <div style={{ padding: '18px 16px 40px' }}>
-        {totalSocios !== null && totalSocios > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 18,
-            background: 'rgba(201,162,75,0.12)', border: '1px solid rgba(201,162,75,0.35)', borderRadius: 999,
-            padding: '8px 16px', fontFamily: fontStack.label, fontSize: 13, fontWeight: 700, color: PALETTE.brass,
-          }}>
-            Ya somos {totalSocios} {totalSocios === 1 ? 'socio' : 'socios'}
-          </div>
-        )}
-
+      <div style={{ padding: '8px 18px 40px' }}>
         {cropSrc && (
           <CropModal src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={(dataUrl) => { setFoto(dataUrl); setCropSrc(null); }} />
         )}
+
+        <div style={{ textAlign: 'center', padding: '18px 0 26px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 320, height: 320, opacity: 0.1, pointerEvents: 'none' }}>
+            <img src="/escudo.png" alt="" style={{ width: '100%', height: '100%' }} />
+          </div>
+          <div style={{ position: 'relative' }}>
+            <h1 style={{
+              fontFamily: fontStack.display, fontWeight: 400, fontSize: 44, margin: 0, letterSpacing: 3, lineHeight: 1,
+              background: `linear-gradient(180deg, ${PALETTE.chalk} 35%, ${PALETTE.brass} 130%)`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.45))',
+            }}>GRADA DE ANIMACIÓN</h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8 }}>
+              <span style={{ width: 26, height: 1, background: 'rgba(201,162,75,0.5)' }} />
+              <div style={{ fontFamily: fontStack.label, color: PALETTE.brass, letterSpacing: 3.5, fontSize: 13, textTransform: 'uppercase', fontWeight: 700 }}>Racing Club Portuense</div>
+              <span style={{ width: 26, height: 1, background: 'rgba(201,162,75,0.5)' }} />
+            </div>
+            <p style={{ color: 'rgba(244,246,241,0.72)', fontSize: 14.5, marginTop: 14, lineHeight: 1.5 }}>
+              Hazte socio de la grada y consigue tu carnet digital al instante.
+            </p>
+            {totalSocios !== null && totalSocios > 0 && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14,
+                background: 'rgba(201,162,75,0.12)', border: '1px solid rgba(201,162,75,0.35)', borderRadius: 999,
+                padding: '5px 14px', fontFamily: fontStack.label, fontSize: 13, fontWeight: 700, color: PALETTE.brass,
+              }}>
+                <Users size={14} /> Ya somos {totalSocios} {totalSocios === 1 ? 'socio' : 'socios'}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div style={{ ...authCardStyle, marginBottom: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
