@@ -26,12 +26,16 @@ export default async function handler(req, res) {
   let suscripciones = [];
 
   if (cuentaId) {
-    const { data } = await supabaseAdmin.rpc('obtener_suscripciones_de_cuenta', { p_cuenta_id: cuentaId });
+    const { data, error } = await supabaseAdmin.rpc('obtener_suscripciones_de_cuenta', { p_cuenta_id: cuentaId });
+    if (error) console.error('Error obteniendo suscripciones de cuenta:', error);
     suscripciones = data || [];
   } else {
-    const { data } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+    const { data, error } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+    if (error) console.error('Error obteniendo todas las suscripciones:', error);
     suscripciones = data || [];
   }
+
+  console.log(`[send-push] Encontradas ${suscripciones.length} suscripciones. cuentaId=${cuentaId || 'todas'}`);
 
   const payload = JSON.stringify({ title, body, url: url || '/inicio' });
 
@@ -41,7 +45,7 @@ export default async function handler(req, res) {
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         payload
       ).catch(async (err) => {
-        // si la suscripción ya no es válida (410/404), la borramos para no acumular basura
+        console.error(`[send-push] Fallo al enviar a ${s.endpoint.slice(0, 60)}...`, err.statusCode, err.body || err.message);
         if (err.statusCode === 410 || err.statusCode === 404) {
           await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
         }
@@ -51,5 +55,6 @@ export default async function handler(req, res) {
   );
 
   const enviados = resultados.filter((r) => r.status === 'fulfilled').length;
+  console.log(`[send-push] Enviados ${enviados} de ${suscripciones.length}`);
   res.status(200).json({ enviados, total: suscripciones.length });
 }
