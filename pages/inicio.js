@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
+import { LoadingCrest } from '../components/LoadingCrest';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field } from '../components/UI';
 import { CropModal } from '../components/CropModal';
@@ -55,6 +56,13 @@ export default function Inicio() {
     supabase.rpc('contar_socios_aprobados').then(({ data }) => setTotalSocios(data));
   }, []);
 
+  if (sesion === undefined) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingCrest texto="Cargando..." />
+      </div>
+    );
+  }
   if (!sesion) return null;
 
   const handleFoto = async (e) => {
