@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
+import { LoadingCrest } from '../components/LoadingCrest';
 import { borrarSesion, marcarPasswordTemporal } from '../lib/session';
 import { activarNotificaciones } from '../lib/push';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
@@ -30,7 +31,11 @@ export default function CuentaPage() {
   const [notifError, setNotifError] = useState(false);
 
   if (sesion === undefined) {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingCrest texto="Cargando..." />
+      </div>
+    );
   }
 
   const handleCambiarPassword = async (e) => {
