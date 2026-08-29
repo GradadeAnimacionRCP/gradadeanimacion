@@ -2,7 +2,7 @@ import { EditarSocioModal } from '../components/EditarSocioModal';
 import { PartidoModal } from '../components/PartidoModal';
 import { NoticiaModal } from '../components/NoticiaModal';
 import { PanelTemporada } from '../components/PanelTemporada';
-import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog } from 'lucide-react';
+import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
@@ -40,6 +40,9 @@ export default function Admin() {
 
   const [usuarios, setUsuarios] = useState(undefined);
   const [tempPasswords, setTempPasswords] = useState({});
+
+  const [verifyId, setVerifyId] = useState('');
+  const [verifyResult, setVerifyResult] = useState(null);
 
   const cargar = useCallback(async () => {
     if (!sesion) return;
@@ -175,6 +178,13 @@ export default function Admin() {
     cargarUsuarios();
   };
 
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    const numero = parseInt(verifyId.trim().toUpperCase().replace('GDA-', ''), 10);
+    const { data } = await supabase.rpc('buscar_socio', { p_numero: numero, p_apellidos: '' });
+    setVerifyResult(data && data[0] ? data[0] : 'not-found');
+  };
+
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '16px 14px 50px' }}>
@@ -194,6 +204,7 @@ export default function Admin() {
           <button onClick={() => setTab('noticias')} style={tabPillStyle(tab === 'noticias')}>Noticias</button>
           <button onClick={() => setTab('usuarios')} style={tabPillStyle(tab === 'usuarios')}>Usuarios</button>
           <button onClick={() => setTab('temporada')} style={tabPillStyle(tab === 'temporada')}>Temporada</button>
+          <button onClick={() => setTab('verificar')} style={tabPillStyle(tab === 'verificar')}>Comprobar</button>
         </div>
 
         {socios === undefined && (tab === 'altas' || tab === 'renovaciones' || tab === 'socios') && (
@@ -467,6 +478,36 @@ export default function Admin() {
         )}
 
         {tab === 'temporada' && <PanelTemporada />}
+
+        {tab === 'verificar' && (
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.12)', borderRadius: 14, padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <ShieldCheck size={17} color={PALETTE.brass} />
+              <h3 style={{ fontFamily: fontStack.heading, fontSize: 15.5, margin: 0, color: PALETTE.chalk }}>Comprobar validez de un carnet</h3>
+            </div>
+            <form onSubmit={handleVerify} style={{ display: 'flex', gap: 8 }}>
+              <input style={{ ...inputStyle, flex: 1 }} placeholder="GDA-0001" value={verifyId} onChange={(e) => setVerifyId(e.target.value)} />
+              <Button type="submit" variant="primary" style={{ padding: '10px 14px' }}>Buscar</Button>
+            </form>
+            {verifyResult === 'not-found' && <div style={{ color: '#ff8a8a', marginTop: 10, fontSize: 13.5 }}>No existe ningún carnet con ese número.</div>}
+            {verifyResult && verifyResult !== 'not-found' && (
+              <div style={{ marginTop: 12, fontSize: 14, color: PALETTE.chalk }}>
+                <div><strong>{verifyResult.nombre} {verifyResult.apellidos}</strong></div>
+                <div style={{ color: 'rgba(244,246,241,0.65)' }}>Alta: {formatFecha(verifyResult.fecha_alta)}</div>
+                {verifyResult.estado_solicitud === 'pendiente' && <div style={{ color: PALETTE.brass, fontWeight: 700, marginTop: 4 }}>⏳ Pendiente de validar</div>}
+                {verifyResult.estado_solicitud === 'rechazado' && <div style={{ color: '#ff8a8a', fontWeight: 700, marginTop: 4 }}>✕ Rechazado</div>}
+                {verifyResult.estado_solicitud === 'aprobado' && (
+                  <>
+                    <div style={{ color: 'rgba(244,246,241,0.65)' }}>Válido hasta: {formatFecha(verifyResult.fecha_caducidad)}</div>
+                    <div style={{ color: ESTADO_COLOR[estadoMember(verifyResult)], fontWeight: 700, marginTop: 4 }}>
+                      {estadoMember(verifyResult) === 'activo' ? '✓ Carnet válido' : `⚠ Carnet ${ESTADO_LABEL[estadoMember(verifyResult)].toLowerCase()}`}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {editando && (
