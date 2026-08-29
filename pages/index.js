@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
-import { guardarSesion, getSesionGuardada } from '../lib/session';
+import { guardarSesion, getSesionGuardada, marcarPasswordTemporal } from '../lib/session';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
-import { Button, Field, PageWrapper } from '../components/UI';
-import { Eye, EyeOff } from 'lucide-react';
+import { Button, Field, PageWrapper, CampoPassword } from '../components/UI';
 
 const RECORDAR_KEY = 'gda_usuario_recordado';
 
@@ -16,34 +15,6 @@ function tabPillStyle(active) {
     color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
     fontFamily: fontStack.label, fontWeight: 700, fontSize: 13, cursor: 'pointer',
   };
-}
-
-function CampoPassword({ label, value, onChange }) {
-  const [ver, setVer] = useState(false);
-  return (
-    <Field label={label}>
-      <div style={{ position: 'relative' }}>
-        <input
-          type={ver ? 'text' : 'password'}
-          style={{ ...inputStyle, paddingRight: 44 }}
-          value={value}
-          onChange={onChange}
-        />
-        <button
-          type="button"
-          onClick={() => setVer((v) => !v)}
-          style={{
-            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-            background: 'none', border: 'none', cursor: 'pointer', padding: 6,
-            color: 'rgba(244,246,241,0.6)', display: 'flex', alignItems: 'center',
-          }}
-          aria-label={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-        >
-          {ver ? <EyeOff size={19} /> : <Eye size={19} />}
-        </button>
-      </div>
-    </Field>
-  );
 }
 
 export default function Home() {
@@ -82,6 +53,7 @@ export default function Home() {
       if (error) { setError(error.message); setCargando(false); return; }
       if (!data || !data[0]) { setError('No se pudo iniciar sesión. Inténtalo de nuevo.'); setCargando(false); return; }
       guardarRecordado();
+      marcarPasswordTemporal(!!data[0].debe_cambiar);
       guardarSesion(data[0].id);
       window.location.href = '/inicio';
     } catch (err) {
@@ -100,6 +72,7 @@ export default function Home() {
       if (error) { setError(error.message); setCargando(false); return; }
       if (!data || !data[0]) { setError('No se pudo crear la cuenta. Inténtalo de nuevo.'); setCargando(false); return; }
       guardarRecordado();
+      marcarPasswordTemporal(false);
       guardarSesion(data[0].id);
       window.location.href = '/inicio';
     } catch (err) {
@@ -157,7 +130,7 @@ export default function Home() {
               <Field label="Usuario o DNI">
                 <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
               </Field>
-              <CampoPassword label="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <CampoPassword label="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(244,246,241,0.75)', marginBottom: 14, cursor: 'pointer' }}>
                 <input type="checkbox" checked={recordar} onChange={(e) => setRecordar(e.target.checked)} />
                 Recordar usuario
@@ -179,8 +152,8 @@ export default function Home() {
               <Field label="Usuario o DNI">
                 <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
               </Field>
-              <CampoPassword label="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <CampoPassword label="Repite la contraseña" value={password2} onChange={(e) => setPassword2(e.target.value)} />
+              <CampoPassword label="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+              <CampoPassword label="Repite la contraseña" value={password2} onChange={(e) => setPassword2(e.target.value)} autoComplete="new-password" />
               {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 12 }}>{error}</div>}
               <Button type="submit" variant="brass" disabled={cargando} style={{ width: '100%' }}>
                 {cargando ? 'Creando cuenta...' : 'Crear cuenta'}
