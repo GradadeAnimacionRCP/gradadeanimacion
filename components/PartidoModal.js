@@ -17,15 +17,56 @@ export function PartidoModal({ partido, onClose, onSaved }) {
   const handleSave = async () => {
     if (!rival.trim()) return;
     setSaving(true);
+
+    const horaNueva = hora || null;
+    const resultadoNuevo = resultado.trim() || null;
+    const horaCambio = !esNuevo && horaNueva && horaNueva !== partido.hora;
+    const resultadoCambio = !esNuevo && resultadoNuevo && resultadoNuevo !== partido.resultado;
+
     const registro = {
-      rival: rival.trim(), es_local: esLocal, fecha: fecha || null, hora: hora || null,
-      jornada: jornada.trim() || null, estadio: estadio.trim() || null, resultado: resultado.trim() || null,
+      rival: rival.trim(), es_local: esLocal, fecha: fecha || null, hora: horaNueva,
+      jornada: jornada.trim() || null, estadio: estadio.trim() || null, resultado: resultadoNuevo,
     };
-       const { error } = esNuevo
-      ? await supabase.from('partidos').insert(registro)
-      : await supabase.from('partidos').update(registro).eq('id', partido.id);
+
+    if (esNuevo) {
+      await supabase.from('partidos').insert(registro);
+    } else {
+      await supabase.from('partidos').update(registro).eq('id', partido.id);
+    }
+
     setSaving(false);
-    if (error) { alert('Error al guardar: ' + error.message); return; }
+
+    if (resultadoCambio) {
+      const [golesA, golesB] = resultadoNuevo.split('-').map((n) => parseInt(n.trim(), 10));
+      let emoji = '🟡';
+      let texto = 'empate';
+      if (!isNaN(golesA) && !isNaN(golesB)) {
+        const ganamos = esLocal ? golesA > golesB : golesB > golesA;
+        const perdemos = esLocal ? golesA < golesB : golesB < golesA;
+        if (ganamos) { emoji = '✅'; texto = 'victoria'; }
+        else if (perdemos) { emoji = '❌'; texto = 'derrota'; }
+      }
+      fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${emoji} Racing Club Portuense ${resultadoNuevo}`,
+          body: `${texto === 'empate' ? 'Empate' : texto === 'victoria' ? 'Victoria' : 'Derrota'} contra ${rival.trim()}`,
+          url: '/calendario',
+        }),
+      }).catch(() => {});
+    } else if (horaCambio) {
+      fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '⏰ Hora confirmada',
+          body: `${esLocal ? 'Racing vs' : 'vs'} ${rival.trim()}: ${horaNueva.slice(0, 5)}`,
+          url: '/calendario',
+        }),
+      }).catch(() => {});
+    }
+
     onSaved();
   };
 
@@ -74,7 +115,9 @@ export function PartidoModal({ partido, onClose, onSaved }) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           <Button variant="ghost" onClick={onClose} style={{ flex: 1 }}>Cancelar</Button>
-          <Button variant="primary" disabled={saving || !rival.trim()} onClick={handleSave} style={{ flex: 1 }}>{saving ? 'Guardando...' : 'Guardar'}</Button>
+          <Button variant="primary" disabled={saving || !rival.trim()} onClick={handleSave} style={{ flex: 1 }}>
+            {saving ? 'Guardando...' : 'Guardar'}
+          </Button>
         </div>
       </div>
     </div>
