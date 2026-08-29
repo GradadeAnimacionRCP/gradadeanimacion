@@ -261,16 +261,29 @@ export default function Admin() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {pendientesPago.map((s) => (
-                <div key={s.id} style={{ background: 'rgba(255,176,32,0.08)', border: '1px solid rgba(255,176,32,0.4)', borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 140 }}>
-                    <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
-                      {formatNumeroSocio(s.numero_socio)} · caducó {formatFecha(s.fecha_caducidad)}
+                <div key={s.id} style={{ background: 'rgba(255,176,32,0.08)', border: '1px solid rgba(255,176,32,0.4)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 140 }}>
+                      <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
+                      <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
+                        {formatNumeroSocio(s.numero_socio)} · caducó {formatFecha(s.fecha_caducidad)}
+                      </div>
                     </div>
+                    <Button variant="primary" disabled={procesando === s.id} onClick={() => handleMarcarPagado(s)} style={{ fontSize: 12.5 }}>
+                      <Check size={14} /> Marcar pagado y renovar
+                    </Button>
                   </div>
-                  <Button variant="primary" disabled={procesando === s.id} onClick={() => handleMarcarPagado(s)} style={{ fontSize: 12.5 }}>
-                    <Check size={14} /> Marcar pagado y renovar
-                  </Button>
+                  {s.solicitud_renovacion_fecha && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(201,162,75,0.08)', border: '1px solid rgba(201,162,75,0.3)', borderRadius: 10, padding: '8px 10px' }}>
+                      {s.solicitud_renovacion_comprobante && (
+                        <img src={s.solicitud_renovacion_comprobante} alt="Comprobante" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: `1px solid ${PALETTE.brass}` }} />
+                      )}
+                      <div style={{ fontSize: 12, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700 }}>
+                        Solicitó renovación el {formatFecha(s.solicitud_renovacion_fecha)}
+                        {!s.solicitud_renovacion_comprobante && ' · sin comprobante'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
