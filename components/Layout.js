@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-import { getSesionGuardada, borrarSesion } from '../lib/session';
+import { getSesionGuardada, borrarSesion, tienePasswordTemporal } from '../lib/session';
 import { PALETTE, fontStack } from '../styles/tema';
-import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck } from 'lucide-react';
+import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 export function useSesion() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export function useSesion() {
       setSesion((actual) => (actual === undefined ? null : actual));
     }, 10000);
 
-        supabase.rpc('obtener_usuario', { p_id: id })
+    supabase.rpc('obtener_usuario', { p_id: id })
       .then(({ data, error }) => {
         clearTimeout(timeoutId);
         if (error || !data) {
@@ -43,6 +43,11 @@ export function useSesion() {
 
 export function Layout({ sesion, children }) {
   const router = useRouter();
+  const [avisoTemporal, setAvisoTemporal] = useState(false);
+
+  useEffect(() => {
+    setAvisoTemporal(tienePasswordTemporal());
+  }, [router.pathname]);
 
   const tabs = [
     { href: '/inicio', label: 'Inicio', icon: Home },
@@ -59,6 +64,15 @@ export function Layout({ sesion, children }) {
       background: `radial-gradient(circle at 50% -10%, ${PALETTE.pitch} 0%, ${PALETTE.ink} 65%)`,
       display: 'flex', flexDirection: 'column',
     }}>
+      {avisoTemporal && (
+        <div style={{
+          background: 'rgba(255,176,32,0.15)', borderBottom: '1px solid rgba(255,176,32,0.4)',
+          color: '#FFD27A', fontSize: 12.5, textAlign: 'center', padding: '10px 14px',
+          fontFamily: fontStack.label, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}>
+          <AlertTriangle size={15} /> Estás usando una contraseña temporal. Cámbiala en "Cuenta" cuanto antes.
+        </div>
+      )}
       <div style={{ flex: 1, paddingBottom: 70 }}>
         {children}
       </div>
