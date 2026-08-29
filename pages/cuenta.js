@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
-import { borrarSesion } from '../lib/session';
+import { useConfirm } from '../components/ConfirmModal';
+import { borrarSesion, marcarPasswordTemporal } from '../lib/session';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
-import { Button, Field } from '../components/UI';
-import { LogOut } from 'lucide-react';
+import { Button, Field, CampoPassword } from '../components/UI';
+import { LogOut, AlertTriangle } from 'lucide-react';
 
 const CLAVE_MAESTRA = 'gradacereceda2026'; // debe coincidir con la que pusiste en la base de datos
 
 export default function CuentaPage() {
   const sesion = useSesion();
+  const [confirm, ConfirmUI] = useConfirm();
 
   const [passActual, setPassActual] = useState('');
   const [passNueva, setPassNueva] = useState('');
@@ -37,6 +39,7 @@ export default function CuentaPage() {
     });
     setCambiando(false);
     if (error) { setErrMsg(error.message); return; }
+    marcarPasswordTemporal(false);
     setPassActual(''); setPassNueva(''); setPassNueva2('');
     setMsg('Contraseña actualizada correctamente.');
   };
@@ -44,18 +47,20 @@ export default function CuentaPage() {
   const handleConvertirEnAdmin = async () => {
     setErrorClave('');
     if (claveMaestra !== CLAVE_MAESTRA) { setErrorClave('Clave incorrecta.'); return; }
-    const { data } = await supabase.rpc('intentar_autopromocion', { p_id: sesion.id, p_clave: claveMaestra }).select();
+    await supabase.rpc('intentar_autopromocion', { p_id: sesion.id, p_clave: claveMaestra });
     window.location.reload();
   };
 
-  const handleLogout = () => {
-    if (!confirm('¿Cerrar sesión en este dispositivo?')) return;
+  const handleLogout = async () => {
+    if (!(await confirm('¿Cerrar sesión en este dispositivo?'))) return;
     borrarSesion();
+    marcarPasswordTemporal(false);
     window.location.href = '/';
   };
 
   return (
     <Layout sesion={sesion}>
+      {ConfirmUI}
       <div style={{ padding: '20px 18px 40px' }}>
         <h2 style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontSize: 20, marginBottom: 4 }}>Mi cuenta</h2>
         <p style={{ color: 'rgba(244,246,241,0.65)', fontSize: 14, marginTop: 0, marginBottom: 20 }}>
@@ -65,15 +70,9 @@ export default function CuentaPage() {
         <div style={{ ...authCardStyle, marginBottom: 18 }}>
           <h3 style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontSize: 15.5, margin: '0 0 12px' }}>Cambiar contraseña</h3>
           <form onSubmit={handleCambiarPassword}>
-            <Field label="Contraseña actual">
-              <input type="password" style={inputStyle} value={passActual} onChange={(e) => setPassActual(e.target.value)} />
-            </Field>
-            <Field label="Nueva contraseña">
-              <input type="password" style={inputStyle} value={passNueva} onChange={(e) => setPassNueva(e.target.value)} />
-            </Field>
-            <Field label="Repite la nueva contraseña">
-              <input type="password" style={inputStyle} value={passNueva2} onChange={(e) => setPassNueva2(e.target.value)} />
-            </Field>
+            <CampoPassword label="Contraseña actual" value={passActual} onChange={(e) => setPassActual(e.target.value)} autoComplete="current-password" />
+            <CampoPassword label="Nueva contraseña" value={passNueva} onChange={(e) => setPassNueva(e.target.value)} autoComplete="new-password" />
+            <CampoPassword label="Repite la nueva contraseña" value={passNueva2} onChange={(e) => setPassNueva2(e.target.value)} autoComplete="new-password" />
             {errMsg && <div style={{ color: '#ff8a8a', fontSize: 13, marginBottom: 10 }}>{errMsg}</div>}
             {msg && <div style={{ color: PALETTE.brass, fontSize: 13, marginBottom: 10 }}>{msg}</div>}
             <Button type="submit" variant="brass" disabled={cambiando} style={{ width: '100%' }}>
