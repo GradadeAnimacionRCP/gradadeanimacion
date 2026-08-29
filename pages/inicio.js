@@ -1,20 +1,47 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field } from '../components/UI';
-import { UserPlus, Search } from 'lucide-react';
+import { CropModal } from '../components/CropModal';
+import { UserPlus, Search, Camera } from 'lucide-react';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
+
+function prepararFotoParaRecorte(file) {
+  const MAX_LADO = 1600;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Este formato de imagen no se puede abrir. Prueba con un JPG o PNG.'));
+      img.onload = () => {
+        const maxLado = Math.max(img.width, img.height);
+        const escala = Math.min(1, MAX_LADO / maxLado);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * escala);
+        canvas.height = Math.round(img.height * escala);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function Inicio() {
   const sesion = useSesion();
 
   const [nombre, setNombre] = useState('');
   const [apellidos, setApellidos] = useState('');
+  const [foto, setFoto] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [cargando, setCargando] = useState(false);
+  const fileRef = useRef(null);
 
   const [busId, setBusId] = useState('');
   const [busApellido, setBusApellido] = useState('');
@@ -22,20 +49,19 @@ export default function Inicio() {
   const [busInfo, setBusInfo] = useState('');
   const [busCargando, setBusCargando] = useState(false);
 
-    if (sesion === undefined) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>
-        Cargando...
-      </div>
-    );
-  }
-  if (sesion === null) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff8a8a', fontFamily: fontStack.label, padding: 20, textAlign: 'center' }}>
-        No se pudo comprobar tu sesión. Recarga la página o vuelve a iniciar sesión.
-      </div>
-    );
-  }
+  if (!sesion) return null;
+
+  const handleFoto = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setError('');
+    try {
+      setCropSrc(await prepararFotoParaRecorte(f));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,12 +72,12 @@ export default function Inicio() {
     }
     setCargando(true);
     const { data, error } = await supabase.rpc('registrar_socio', {
-      p_cuenta_id: sesion.id, p_nombre: nombre, p_apellidos: apellidos, p_foto: null,
+      p_cuenta_id: sesion.id, p_nombre: nombre, p_apellidos: apellidos, p_foto: foto,
     });
     setCargando(false);
     if (error) { setError(error.message); return; }
     setOk(`¡Carnet ${data.id} creado! Está pendiente de que un admin lo valide. Lo verás en "Mis carnets".`);
-    setNombre(''); setApellidos('');
+    setNombre(''); setApellidos(''); setFoto(null);
   };
 
   const handleBuscar = async (e) => {
@@ -83,6 +109,10 @@ export default function Inicio() {
   return (
     <Layout sesion={sesion}>
       <div style={{ padding: '18px 16px 40px' }}>
+        {cropSrc && (
+          <CropModal src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={(dataUrl) => { setFoto(dataUrl); setCropSrc(null); }} />
+        )}
+
         <div style={{ ...authCardStyle, marginBottom: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <UserPlus size={18} color={PALETTE.stripeSoft} />
@@ -94,6 +124,21 @@ export default function Inicio() {
             </Field>
             <Field label="Apellidos">
               <input style={inputStyle} value={apellidos} onChange={(e) => setApellidos(e.target.value)} />
+            </Field>
+            <Field label="Fotografía (opcional)">
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleFoto}
+                style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div onClick={() => fileRef.current?.click()} style={{
+                  width: 60, height: 60, borderRadius: 12, border: `2px dashed ${PALETTE.brass}`, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'rgba(255,255,255,0.05)',
+                }}>
+                  {foto ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={22} color={PALETTE.brass} />}
+                </div>
+                <Button type="button" variant="ghost" onClick={() => fileRef.current?.click()} style={{ fontSize: 13 }}>
+                  {foto ? 'Cambiar' : 'Subir foto'}
+                </Button>
+              </div>
             </Field>
             {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{error}</div>}
             {ok && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{ok}</div>}
