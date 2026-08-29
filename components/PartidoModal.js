@@ -21,12 +21,11 @@ export function PartidoModal({ partido, onClose, onSaved }) {
       rival: rival.trim(), es_local: esLocal, fecha: fecha || null, hora: hora || null,
       jornada: jornada.trim() || null, estadio: estadio.trim() || null, resultado: resultado.trim() || null,
     };
-    if (esNuevo) {
-      await supabase.from('partidos').insert(registro);
-    } else {
-      await supabase.from('partidos').update(registro).eq('id', partido.id);
-    }
+       const { error } = esNuevo
+      ? await supabase.from('partidos').insert(registro)
+      : await supabase.from('partidos').update(registro).eq('id', partido.id);
     setSaving(false);
+    if (error) { alert('Error al guardar: ' + error.message); return; }
     onSaved();
   };
 
