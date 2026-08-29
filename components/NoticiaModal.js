@@ -56,6 +56,13 @@ export function NoticiaModal({ noticia, onClose, onSaved }) {
       : await supabase.from('noticias').update(registro).eq('id', noticia.id);
     setSaving(false);
     if (error) { setError('Error al guardar: ' + error.message); return; }
+    if (esNueva) {
+      fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: '📰 Nueva noticia', body: titulo.trim(), url: '/noticias' }),
+      }).catch(() => {});
+    }
     onSaved();
   };
 
