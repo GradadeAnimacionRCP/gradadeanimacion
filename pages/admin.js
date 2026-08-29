@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { PALETTE, fontStack } from '../styles/tema';
 import { Button } from '../components/UI';
+import { RefreshCw as IconTraspaso } from 'lucide-react';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
 import { UserPlus, Check, X, Users, RefreshCw, FlaskConical, AlertTriangle } from 'lucide-react';
 
@@ -54,8 +55,12 @@ export default function Admin() {
 
   const pendientes = (socios || []).filter((s) => s.estado_solicitud === 'pendiente');
   const pendientesPago = (socios || []).filter((s) => s.estado_solicitud === 'aprobado' && estadoMember(s) === 'caducado');
-  const resto = (socios || []).filter((s) => s.estado_solicitud !== 'pendiente' && !(s.estado_solicitud === 'aprobado' && estadoMember(s) === 'caducado'));
-
+    const traspasos = (socios || []).filter((s) => s.traspaso_cuenta_destino);
+  const resto = (socios || []).filter((s) =>
+    s.estado_solicitud !== 'pendiente' &&
+    !(s.estado_solicitud === 'aprobado' && estadoMember(s) === 'caducado') &&
+    !s.traspaso_cuenta_destino
+  );
   const handleAprobar = async (s) => {
     setProcesando(s.id);
     await supabase.rpc('aprobar_socio', { p_admin_id: sesion.id, p_id: s.id, p_tipo: tipoSeleccion[s.id] || 'General' });
@@ -93,6 +98,20 @@ export default function Admin() {
     if (!confirm(`¿Eliminar el carnet ${formatNumeroSocio(s.numero_socio)} (${s.nombre} ${s.apellidos})? Esta acción no se puede deshacer.`)) return;
     setProcesando(s.id);
     await supabase.rpc('admin_eliminar_socio', { p_admin_id: sesion.id, p_id: s.id });
+    setProcesando(null);
+    cargar();
+  };
+  const handleAceptarTraspaso = async (s) => {
+    if (!confirm(`¿Trasladar el carnet ${formatNumeroSocio(s.numero_socio)} (${s.nombre} ${s.apellidos}) a la nueva cuenta? La cuenta anterior dejará de tener acceso a él.`)) return;
+    setProcesando(s.id);
+    await supabase.rpc('admin_confirmar_traspaso', { p_admin_id: sesion.id, p_id: s.id });
+    setProcesando(null);
+    cargar();
+  };
+  const handleRechazarTraspaso = async (s) => {
+    if (!confirm(`¿Rechazar la solicitud de traspaso del carnet ${formatNumeroSocio(s.numero_socio)}? Seguirá en la cuenta actual.`)) return;
+    setProcesando(s.id);
+    await supabase.rpc('admin_rechazar_traspaso', { p_admin_id: sesion.id, p_id: s.id });
     setProcesando(null);
     cargar();
   };
@@ -182,6 +201,34 @@ export default function Admin() {
         )}
 
         {socios !== undefined && tab === 'socios' && (
+                      {traspasos.length > 0 && (
+              <div style={{ background: 'rgba(30,120,220,0.08)', border: '1px solid rgba(80,150,255,0.4)', borderRadius: 14, padding: 14, marginBottom: 20 }}>
+                <h3 style={{ fontFamily: fontStack.heading, fontSize: 15.5, margin: '0 0 8px', color: PALETTE.chalk }}>
+                  Solicitudes de traspaso ({traspasos.length})
+                </h3>
+                <p style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', marginBottom: 12, lineHeight: 1.5 }}>
+                  Alguien ha pedido usar uno de estos carnets desde otra cuenta. Es personal e intransferible: solo pasa si lo confirmas.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {traspasos.map((s) => (
+                    <div key={s.id} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 140 }}>
+                        <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
+                          {formatNumeroSocio(s.numero_socio)} · solicitado {formatFecha(s.traspaso_fecha)}
+                        </div>
+                      </div>
+                      <Button variant="primary" disabled={procesando === s.id} onClick={() => handleAceptarTraspaso(s)} style={{ fontSize: 12.5 }}>
+                        <Check size={14} /> Confirmar
+                      </Button>
+                      <Button variant="danger" disabled={procesando === s.id} onClick={() => handleRechazarTraspaso(s)} style={{ fontSize: 12.5 }}>
+                        <X size={14} /> Rechazar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {resto.map((s) => {
               const est = estadoMember(s);
