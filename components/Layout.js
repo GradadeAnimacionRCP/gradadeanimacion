@@ -21,14 +21,14 @@ export function useSesion() {
       setSesion((actual) => (actual === undefined ? null : actual));
     }, 10000);
 
-    supabase.rpc('obtener_usuario', { p_id: id })
+        supabase.rpc('obtener_usuario', { p_id: id })
       .then(({ data, error }) => {
         clearTimeout(timeoutId);
-        if (error || !data || data.length === 0) {
+        if (error || !data) {
           borrarSesion();
           router.replace('/');
         } else {
-          setSesion(data[0]);
+          setSesion(data);
         }
       })
       .catch((err) => {
