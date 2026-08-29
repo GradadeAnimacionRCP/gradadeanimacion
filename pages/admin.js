@@ -2,6 +2,7 @@ import { EditarSocioModal } from '../components/EditarSocioModal';
 import { PartidoModal } from '../components/PartidoModal';
 import { NoticiaModal } from '../components/NoticiaModal';
 import { PanelTemporada } from '../components/PanelTemporada';
+import { useConfirm } from '../components/ConfirmModal';
 import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck, Camera } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
@@ -22,6 +23,7 @@ function filtrar(lista, query, campoFn) {
 
 export default function Admin() {
   const sesion = useSesion();
+  const [confirm, ConfirmUI] = useConfirm();
   const [socios, setSocios] = useState(undefined);
   const [tipoSeleccion, setTipoSeleccion] = useState({});
   const [procesando, setProcesando] = useState(null);
@@ -123,14 +125,14 @@ export default function Admin() {
     cargar();
   };
   const handleRechazar = async (s) => {
-    if (!confirm(`¿Rechazar la solicitud de ${s.nombre} ${s.apellidos}?`)) return;
+    if (!(await confirm(`¿Rechazar la solicitud de ${s.nombre} ${s.apellidos}?`))) return;
     setProcesando(s.id);
     await supabase.rpc('rechazar_socio', { p_admin_id: sesion.id, p_id: s.id });
     setProcesando(null);
     cargar();
   };
   const handleMarcarPagado = async (s) => {
-    if (!confirm(`¿Confirmas que ${s.nombre} ${s.apellidos} ha pagado la cuota? Se renovará su carnet un año.`)) return;
+    if (!(await confirm(`¿Confirmas que ${s.nombre} ${s.apellidos} ha pagado la cuota? Se renovará su carnet un año.`))) return;
     setProcesando(s.id);
     await supabase.rpc('marcar_pagado_y_renovar', { p_admin_id: sesion.id, p_id: s.id });
     setProcesando(null);
@@ -143,21 +145,21 @@ export default function Admin() {
     cargar();
   };
   const handleEliminar = async (s) => {
-    if (!confirm(`¿Eliminar el carnet ${formatNumeroSocio(s.numero_socio)} (${s.nombre} ${s.apellidos})? Esta acción no se puede deshacer.`)) return;
+    if (!(await confirm(`¿Eliminar el carnet ${formatNumeroSocio(s.numero_socio)} (${s.nombre} ${s.apellidos})? Esta acción no se puede deshacer.`))) return;
     setProcesando(s.id);
     await supabase.rpc('admin_eliminar_socio', { p_admin_id: sesion.id, p_id: s.id });
     setProcesando(null);
     cargar();
   };
   const handleAceptarTraspaso = async (s) => {
-    if (!confirm(`¿Trasladar el carnet ${formatNumeroSocio(s.numero_socio)} (${s.nombre} ${s.apellidos}) a la nueva cuenta? La cuenta anterior dejará de tener acceso a él.`)) return;
+    if (!(await confirm(`¿Trasladar el carnet ${formatNumeroSocio(s.numero_socio)} (${s.nombre} ${s.apellidos}) a la nueva cuenta? La cuenta anterior dejará de tener acceso a él.`))) return;
     setProcesando(s.id);
     await supabase.rpc('admin_confirmar_traspaso', { p_admin_id: sesion.id, p_id: s.id });
     setProcesando(null);
     cargar();
   };
   const handleRechazarTraspaso = async (s) => {
-    if (!confirm(`¿Rechazar la solicitud de traspaso del carnet ${formatNumeroSocio(s.numero_socio)}? Seguirá en la cuenta actual.`)) return;
+    if (!(await confirm(`¿Rechazar la solicitud de traspaso del carnet ${formatNumeroSocio(s.numero_socio)}? Seguirá en la cuenta actual.`))) return;
     setProcesando(s.id);
     await supabase.rpc('admin_rechazar_traspaso', { p_admin_id: sesion.id, p_id: s.id });
     setProcesando(null);
@@ -165,13 +167,13 @@ export default function Admin() {
   };
 
   const handleEliminarPartido = async (p) => {
-    if (!confirm(`¿Eliminar el partido contra ${p.rival}?`)) return;
+    if (!(await confirm(`¿Eliminar el partido contra ${p.rival}?`))) return;
     await supabase.from('partidos').delete().eq('id', p.id);
     cargarPartidos();
   };
 
   const handleEliminarNoticia = async (n) => {
-    if (!confirm(`¿Eliminar la noticia "${n.titulo}"?`)) return;
+    if (!(await confirm(`¿Eliminar la noticia "${n.titulo}"?`))) return;
     await supabase.from('noticias').delete().eq('id', n.id);
     cargarNoticias();
   };
@@ -179,14 +181,14 @@ export default function Admin() {
   const handleAsignarTemporal = async (u) => {
     const valor = (tempPasswords[u.id] || '').trim();
     if (valor.length < 4) return;
-    if (!confirm(`¿Asignar "${valor}" como contraseña temporal de ${u.usuario}? Debes comunicársela tú por otro medio.`)) return;
+    if (!(await confirm(`¿Asignar "${valor}" como contraseña temporal de ${u.usuario}? Debes comunicársela tú por otro medio.`))) return;
     await supabase.rpc('asignar_password_temporal', { p_admin_id: sesion.id, p_id: u.id, p_temp: valor });
     setTempPasswords((prev) => ({ ...prev, [u.id]: '' }));
     cargarUsuarios();
   };
   const handleToggleAdmin = async (u) => {
     const mensaje = u.is_admin ? `¿Quitar el acceso de administrador a ${u.usuario}?` : `¿Convertir a ${u.usuario} en administrador?`;
-    if (!confirm(mensaje)) return;
+    if (!(await confirm(mensaje))) return;
     await supabase.rpc('admin_toggle_admin', { p_admin_id: sesion.id, p_target_id: u.id });
     cargarUsuarios();
   };
@@ -200,6 +202,7 @@ export default function Admin() {
 
   return (
     <Layout sesion={sesion}>
+      {ConfirmUI}
       <div style={{ padding: '16px 14px 50px' }}>
         <h2 style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontSize: 20, marginBottom: 16 }}>
           Panel de socios {socios ? `(${resto.length})` : ''}
