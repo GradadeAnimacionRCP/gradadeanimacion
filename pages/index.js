@@ -18,11 +18,12 @@ function tabPillStyle(active) {
 export default function Home() {
   const router = useRouter();
   const [comprobando, setComprobando] = useState(true);
-  const [modo, setModo] = useState('login');
+  const [modo, setModo] = useState('login'); // login | registro | olvide
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
@@ -31,7 +32,9 @@ export default function Home() {
     setComprobando(false);
   }, []);
 
-    const handleLogin = async (e) => {
+  const limpiarMensajes = () => { setError(''); setInfo(''); };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setCargando(true);
@@ -64,6 +67,17 @@ export default function Home() {
     }
   };
 
+  const handleOlvide = async (e) => {
+    e.preventDefault();
+    limpiarMensajes();
+    if (!usuario.trim()) { setError('Introduce tu nombre de usuario.'); return; }
+    setCargando(true);
+    const { error } = await supabase.rpc('solicitar_reset', { p_usuario: usuario });
+    setCargando(false);
+    if (error) { setError(error.message); return; }
+    setInfo('Solicitud enviada. Un admin de la grada te asignará una contraseña temporal; vuelve a intentarlo con ella cuando te avise.');
+  };
+
   if (comprobando) {
     return (
       <PageWrapper>
@@ -90,28 +104,70 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            <button onClick={() => { setModo('login'); setError(''); }} style={tabPillStyle(modo === 'login')}>Iniciar sesión</button>
-            <button onClick={() => { setModo('registro'); setError(''); }} style={tabPillStyle(modo === 'registro')}>Crear cuenta</button>
-          </div>
+          {modo !== 'olvide' && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+              <button onClick={() => { setModo('login'); limpiarMensajes(); }} style={tabPillStyle(modo === 'login')}>Iniciar sesión</button>
+              <button onClick={() => { setModo('registro'); limpiarMensajes(); }} style={tabPillStyle(modo === 'registro')}>Crear cuenta</button>
+            </div>
+          )}
 
-          <form onSubmit={modo === 'login' ? handleLogin : handleRegistro} style={authCardStyle}>
-            <Field label="Usuario o DNI">
-              <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
-            </Field>
-            <Field label="Contraseña">
-              <input type="password" style={{ ...inputStyle, fontSize: 10 }} value={password} onChange={(e) => setPassword(e.target.value)} />
-            </Field>
-            {modo === 'registro' && (
+          {modo === 'login' && (
+            <form onSubmit={handleLogin} style={authCardStyle}>
+              <Field label="Usuario o DNI">
+                <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
+              </Field>
+              <Field label="Contraseña">
+                <input type="password" style={{ ...inputStyle, fontSize: 10 }} value={password} onChange={(e) => setPassword(e.target.value)} />
+              </Field>
+              {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 12 }}>{error}</div>}
+              {info && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 12, lineHeight: 1.5 }}>{info}</div>}
+              <Button type="submit" variant="brass" disabled={cargando} style={{ width: '100%' }}>
+                {cargando ? 'Entrando...' : 'Iniciar sesión'}
+              </Button>
+              <button type="button" onClick={() => { setModo('olvide'); limpiarMensajes(); }}
+                style={{ background: 'none', border: 'none', color: PALETTE.brass, fontSize: 12.5, marginTop: 14, cursor: 'pointer', width: '100%', textAlign: 'center' }}>
+                He olvidado mi contraseña
+              </button>
+            </form>
+          )}
+
+          {modo === 'registro' && (
+            <form onSubmit={handleRegistro} style={authCardStyle}>
+              <Field label="Usuario o DNI">
+                <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
+              </Field>
+              <Field label="Contraseña">
+                <input type="password" style={{ ...inputStyle, fontSize: 10 }} value={password} onChange={(e) => setPassword(e.target.value)} />
+              </Field>
               <Field label="Repite la contraseña">
                 <input type="password" style={{ ...inputStyle, fontSize: 10 }} value={password2} onChange={(e) => setPassword2(e.target.value)} />
               </Field>
-            )}
-            {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 12 }}>{error}</div>}
-            <Button type="submit" variant="brass" disabled={cargando} style={{ width: '100%' }}>
-              {cargando ? 'Espera...' : modo === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
-            </Button>
-          </form>
+              {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 12 }}>{error}</div>}
+              <Button type="submit" variant="brass" disabled={cargando} style={{ width: '100%' }}>
+                {cargando ? 'Creando cuenta...' : 'Crear cuenta'}
+              </Button>
+            </form>
+          )}
+
+          {modo === 'olvide' && (
+            <form onSubmit={handleOlvide} style={authCardStyle}>
+              <p style={{ fontSize: 13, color: 'rgba(244,246,241,0.7)', marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+                Introduce tu usuario. Un admin de la grada verá tu solicitud y te asignará una contraseña temporal.
+              </p>
+              <Field label="Usuario o DNI">
+                <input style={inputStyle} value={usuario} onChange={(e) => setUsuario(e.target.value)} autoCapitalize="none" />
+              </Field>
+              {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 12 }}>{error}</div>}
+              {info && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 12, lineHeight: 1.5 }}>{info}</div>}
+              <Button type="submit" variant="brass" disabled={cargando} style={{ width: '100%' }}>
+                {cargando ? 'Enviando...' : 'Solicitar contraseña temporal'}
+              </Button>
+              <button type="button" onClick={() => { setModo('login'); limpiarMensajes(); }}
+                style={{ background: 'none', border: 'none', color: PALETTE.brass, fontSize: 12.5, marginTop: 14, cursor: 'pointer', width: '100%', textAlign: 'center' }}>
+                ← Volver a iniciar sesión
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </PageWrapper>
