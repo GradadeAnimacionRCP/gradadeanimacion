@@ -3,11 +3,12 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
 import { borrarSesion, marcarPasswordTemporal } from '../lib/session';
+import { activarNotificaciones } from '../lib/push';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field, CampoPassword } from '../components/UI';
-import { LogOut, AlertTriangle } from 'lucide-react';
+import { LogOut, Bell } from 'lucide-react';
 
-const CLAVE_MAESTRA = 'gradacereceda2026'; // debe coincidir con la que pusiste en la base de datos
+const CLAVE_MAESTRA = 'CAMBIA-ESTA-CLAVE-2027'; // debe coincidir con la que pusiste en la base de datos
 
 export default function CuentaPage() {
   const sesion = useSesion();
@@ -23,6 +24,10 @@ export default function CuentaPage() {
   const [claveMaestra, setClaveMaestra] = useState('');
   const [mostrarClaveMaestra, setMostrarClaveMaestra] = useState(false);
   const [errorClave, setErrorClave] = useState('');
+
+  const [activandoNotif, setActivandoNotif] = useState(false);
+  const [notifMsg, setNotifMsg] = useState('');
+  const [notifError, setNotifError] = useState(false);
 
   if (sesion === undefined) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PALETTE.chalk, fontFamily: fontStack.label }}>Cargando...</div>;
@@ -49,6 +54,21 @@ export default function CuentaPage() {
     if (claveMaestra !== CLAVE_MAESTRA) { setErrorClave('Clave incorrecta.'); return; }
     await supabase.rpc('intentar_autopromocion', { p_id: sesion.id, p_clave: claveMaestra });
     window.location.reload();
+  };
+
+  const handleActivarNotif = async () => {
+    setActivandoNotif(true);
+    setNotifMsg('');
+    try {
+      await activarNotificaciones(sesion.id);
+      setNotifError(false);
+      setNotifMsg('¡Avisos activados! Ya te llegarán las notificaciones a este dispositivo.');
+    } catch (err) {
+      setNotifError(true);
+      setNotifMsg(err.message);
+    } finally {
+      setActivandoNotif(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -98,6 +118,17 @@ export default function CuentaPage() {
             )}
           </div>
         )}
+
+        <div style={{ ...authCardStyle, marginBottom: 18 }}>
+          <h3 style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontSize: 15.5, margin: '0 0 12px' }}>Avisos</h3>
+          <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', marginTop: 0, marginBottom: 12, lineHeight: 1.5 }}>
+            Actívalos para enterarte al momento de noticias, tu carnet aprobado, partidos y renovaciones.
+          </p>
+          {notifMsg && <div style={{ color: notifError ? '#ff8a8a' : PALETTE.brass, fontSize: 13, marginBottom: 10 }}>{notifMsg}</div>}
+          <Button variant="brass" onClick={handleActivarNotif} disabled={activandoNotif} style={{ width: '100%' }}>
+            <Bell size={16} /> {activandoNotif ? 'Activando...' : 'Activar notificaciones'}
+          </Button>
+        </div>
 
         <Button variant="ghost" onClick={handleLogout} style={{ width: '100%' }}>
           <LogOut size={16} /> Cerrar sesión
