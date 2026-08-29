@@ -16,6 +16,18 @@ import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle } from 'lucide-reac
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
 
+async function enviarPush({ cuentaId, title, body, url }) {
+  try {
+    await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cuentaId, title, body, url }),
+    });
+  } catch (err) {
+    console.error('No se pudo enviar el aviso:', err);
+  }
+}
+
 function filtrar(lista, query, campoFn) {
   const q = query.trim().toLowerCase();
   if (!q) return lista;
@@ -134,6 +146,25 @@ export default function Admin() {
     await supabase.rpc('aprobar_socio', { p_admin_id: sesion.id, p_id: s.id, p_tipo: tipoSeleccion[s.id] || 'General' });
     setProcesando(null);
     cargar();
+
+    if (s.cuenta_id) {
+      enviarPush({
+        cuentaId: s.cuenta_id,
+        title: '¡Tu carnet ha sido validado! 🎉',
+        body: `Ya puedes ver tu carnet de socio ${formatNumeroSocio(s.numero_socio)}.`,
+        url: '/carnets',
+      });
+    }
+
+    const { data: total } = await supabase.rpc('contar_socios_aprobados');
+    const metas = [100, 200, 300, 400, 500, 750, 1000];
+    if (metas.includes(total)) {
+      enviarPush({
+        title: `¡Ya somos ${total} socios! 🔥`,
+        body: 'Gracias a toda la grada por hacerlo posible.',
+        url: '/inicio',
+      });
+    }
   };
   const handleRechazar = async (s) => {
     if (!(await confirm(`¿Rechazar la solicitud de ${s.nombre} ${s.apellidos}?`))) return;
