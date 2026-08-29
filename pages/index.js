@@ -5,6 +5,8 @@ import { guardarSesion, getSesionGuardada } from '../lib/session';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field, PageWrapper } from '../components/UI';
 
+const RECORDAR_KEY = 'gda_usuario_recordado';
+
 function tabPillStyle(active) {
   return {
     flex: 1, padding: '10px 0', borderRadius: 10,
@@ -18,10 +20,11 @@ function tabPillStyle(active) {
 export default function Home() {
   const router = useRouter();
   const [comprobando, setComprobando] = useState(true);
-  const [modo, setModo] = useState('login'); // login | registro | olvide
+  const [modo, setModo] = useState('login');
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
+  const [recordar, setRecordar] = useState(true);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -29,10 +32,17 @@ export default function Home() {
   useEffect(() => {
     const id = getSesionGuardada();
     if (id) { router.replace('/inicio'); return; }
+    const recordado = typeof window !== 'undefined' ? localStorage.getItem(RECORDAR_KEY) : null;
+    if (recordado) setUsuario(recordado);
     setComprobando(false);
   }, []);
 
   const limpiarMensajes = () => { setError(''); setInfo(''); };
+
+  const guardarRecordado = () => {
+    if (recordar) localStorage.setItem(RECORDAR_KEY, usuario);
+    else localStorage.removeItem(RECORDAR_KEY);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -42,6 +52,7 @@ export default function Home() {
       const { data, error } = await supabase.rpc('iniciar_sesion', { p_usuario: usuario, p_password: password });
       if (error) { setError(error.message); setCargando(false); return; }
       if (!data || !data[0]) { setError('No se pudo iniciar sesión. Inténtalo de nuevo.'); setCargando(false); return; }
+      guardarRecordado();
       guardarSesion(data[0].id);
       window.location.href = '/inicio';
     } catch (err) {
@@ -59,6 +70,7 @@ export default function Home() {
       const { data, error } = await supabase.rpc('registrar_usuario', { p_usuario: usuario, p_password: password });
       if (error) { setError(error.message); setCargando(false); return; }
       if (!data || !data[0]) { setError('No se pudo crear la cuenta. Inténtalo de nuevo.'); setCargando(false); return; }
+      guardarRecordado();
       guardarSesion(data[0].id);
       window.location.href = '/inicio';
     } catch (err) {
@@ -119,6 +131,10 @@ export default function Home() {
               <Field label="Contraseña">
                 <input type="password" style={{ ...inputStyle, fontSize: 10 }} value={password} onChange={(e) => setPassword(e.target.value)} />
               </Field>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(244,246,241,0.75)', marginBottom: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={recordar} onChange={(e) => setRecordar(e.target.checked)} />
+                Recordar usuario
+              </label>
               {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 12 }}>{error}</div>}
               {info && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 12, lineHeight: 1.5 }}>{info}</div>}
               <Button type="submit" variant="brass" disabled={cargando} style={{ width: '100%' }}>
