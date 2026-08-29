@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { PALETTE, fontStack } from '../styles/tema';
-import { Button } from './UI';
+import { PALETTE, fontStack, inputStyle } from '../styles/tema';
+import { Button, Field } from './UI';
 import { anioTemporadaActual, getFondoTemporada, setFondoTemporada, eliminarFondoTemporada, prepararImagenFondo } from '../lib/temporada';
 import { Camera, Trash2 } from 'lucide-react';
-
-const ESCUDO_DEFECTO = '/escudo-fondo-defecto.jpg'; // ver nota más abajo
 
 function TarjetaTemporada({ anio, esActual, fondo, subiendo, onElegir, onQuitar }) {
   return (
@@ -12,9 +10,8 @@ function TarjetaTemporada({ anio, esActual, fondo, subiendo, onElegir, onQuitar 
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 600, fontSize: 15.5 }}>
           Temporada {anio - 1}/{anio}{' '}
-          {esActual
-            ? <span style={{ color: PALETTE.brass, fontSize: 12, fontWeight: 700 }}>· en curso</span>
-            : <span style={{ color: '#6fa8ff', fontSize: 12, fontWeight: 700 }}>· próxima</span>}
+          {esActual === true && <span style={{ color: PALETTE.brass, fontSize: 12, fontWeight: 700 }}>· en curso</span>}
+          {esActual === false && <span style={{ color: '#6fa8ff', fontSize: 12, fontWeight: 700 }}>· próxima</span>}
         </div>
         <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.55)' }}>
           {fondo ? 'Foto personalizada' : 'Todavía sin foto propia'}
@@ -43,6 +40,10 @@ export function PanelTemporada() {
   const [subiendo, setSubiendo] = useState(null);
   const [error, setError] = useState('');
 
+  const [anioManual, setAnioManual] = useState('');
+  const [fondoManual, setFondoManual] = useState(null);
+  const [buscadoManual, setBuscadoManual] = useState(null);
+
   const cargar = async () => {
     const [actual, siguiente] = await Promise.all([
       getFondoTemporada(anioActual), getFondoTemporada(anioSiguiente),
@@ -65,7 +66,8 @@ export function PanelTemporada() {
       try {
         const dataUrl = await prepararImagenFondo(f);
         await setFondoTemporada(anio, dataUrl);
-        await cargar();
+        if (anio === anioActual || anio === anioSiguiente) await cargar();
+        if (anio === buscadoManual) setFondoManual(dataUrl);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -78,7 +80,15 @@ export function PanelTemporada() {
   const handleQuitar = async (anio) => {
     if (!confirm(`¿Quitar la foto personalizada de la temporada ${anio - 1}/${anio}?`)) return;
     await eliminarFondoTemporada(anio);
-    await cargar();
+    if (anio === anioActual || anio === anioSiguiente) await cargar();
+    if (anio === buscadoManual) setFondoManual(null);
+  };
+
+  const handleBuscarManual = async () => {
+    const anio = parseInt(anioManual, 10);
+    if (!anio) return;
+    setBuscadoManual(anio);
+    setFondoManual(await getFondoTemporada(anio));
   };
 
   if (loading) return <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 30 }}>Cargando...</div>;
@@ -93,6 +103,23 @@ export function PanelTemporada() {
         onElegir={() => handleElegir(anioActual)} onQuitar={() => handleQuitar(anioActual)} />
       <TarjetaTemporada anio={anioSiguiente} esActual={false} fondo={fondos[anioSiguiente]} subiendo={subiendo === anioSiguiente}
         onElegir={() => handleElegir(anioSiguiente)} onQuitar={() => handleQuitar(anioSiguiente)} />
+
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.12)', borderRadius: 16, padding: 16, marginTop: 8 }}>
+        <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5, marginBottom: 10 }}>
+          Editar otra temporada (avanzado)
+        </div>
+        <p style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.5)', marginTop: 0, marginBottom: 10, lineHeight: 1.5 }}>
+          Útil para pruebas o para corregir una temporada antigua. Introduce el año en que caduca esa temporada (por ejemplo, 2026 para la temporada 2025/2026).
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <input type="number" style={{ ...inputStyle, flex: 1 }} placeholder="Ej. 2026" value={anioManual} onChange={(e) => setAnioManual(e.target.value)} />
+          <Button variant="ghost" onClick={handleBuscarManual}>Buscar</Button>
+        </div>
+        {buscadoManual && (
+          <TarjetaTemporada anio={buscadoManual} esActual={null} fondo={fondoManual} subiendo={subiendo === buscadoManual}
+            onElegir={() => handleElegir(buscadoManual)} onQuitar={() => handleQuitar(buscadoManual)} />
+        )}
+      </div>
     </div>
   );
 }
