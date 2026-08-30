@@ -111,7 +111,6 @@ export function PartidoCard({ partido, destacado = false }) {
       )}
 
       {!pasado && partido.estadio && (
-        
           href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(partido.estadio)}`}
           target="_blank" rel="noopener noreferrer"
           style={{
