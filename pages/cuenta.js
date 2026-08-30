@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
 import { LoadingCrest } from '../components/LoadingCrest';
 import { borrarSesion, marcarPasswordTemporal } from '../lib/session';
-import { activarNotificaciones } from '../lib/push';
+import { activarNotificaciones, desactivarNotificaciones, estaSuscrito } from '../lib/push';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field, CampoPassword } from '../components/UI';
-import { LogOut, Bell } from 'lucide-react';
+import { LogOut, Bell, BellOff, CheckCircle2 } from 'lucide-react';
 
-const CLAVE_MAESTRA = 'gradacereceda2026'; // debe coincidir con la que pusiste en la base de datos
+const CLAVE_MAESTRA = 'CAMBIA-ESTA-CLAVE-2027'; // debe coincidir con la que pusiste en la base de datos
 
 export default function CuentaPage() {
   const sesion = useSesion();
@@ -26,9 +26,14 @@ export default function CuentaPage() {
   const [mostrarClaveMaestra, setMostrarClaveMaestra] = useState(false);
   const [errorClave, setErrorClave] = useState('');
 
-  const [activandoNotif, setActivandoNotif] = useState(false);
+  const [notifActivas, setNotifActivas] = useState(null); // null = comprobando, true/false = ya se sabe
+  const [procesandoNotif, setProcesandoNotif] = useState(false);
   const [notifMsg, setNotifMsg] = useState('');
   const [notifError, setNotifError] = useState(false);
+
+  useEffect(() => {
+    estaSuscrito().then(setNotifActivas);
+  }, []);
 
   if (sesion === undefined) {
     return (
@@ -62,17 +67,35 @@ export default function CuentaPage() {
   };
 
   const handleActivarNotif = async () => {
-    setActivandoNotif(true);
+    setProcesandoNotif(true);
     setNotifMsg('');
     try {
       await activarNotificaciones(sesion.id);
       setNotifError(false);
       setNotifMsg('¡Avisos activados! Ya te llegarán las notificaciones a este dispositivo.');
+      setNotifActivas(true);
     } catch (err) {
       setNotifError(true);
       setNotifMsg(err.message);
     } finally {
-      setActivandoNotif(false);
+      setProcesandoNotif(false);
+    }
+  };
+
+  const handleDesactivarNotif = async () => {
+    if (!(await confirm('¿Desactivar los avisos en este dispositivo?'))) return;
+    setProcesandoNotif(true);
+    setNotifMsg('');
+    try {
+      await desactivarNotificaciones();
+      setNotifActivas(false);
+      setNotifMsg('Avisos desactivados en este dispositivo.');
+      setNotifError(false);
+    } catch (err) {
+      setNotifError(true);
+      setNotifMsg('No se pudieron desactivar: ' + err.message);
+    } finally {
+      setProcesandoNotif(false);
     }
   };
 
@@ -130,9 +153,29 @@ export default function CuentaPage() {
             Actívalos para enterarte al momento de noticias, tu carnet aprobado, partidos y renovaciones.
           </p>
           {notifMsg && <div style={{ color: notifError ? '#ff8a8a' : PALETTE.brass, fontSize: 13, marginBottom: 10 }}>{notifMsg}</div>}
-          <Button variant="brass" onClick={handleActivarNotif} disabled={activandoNotif} style={{ width: '100%' }}>
-            <Bell size={16} /> {activandoNotif ? 'Activando...' : 'Activar notificaciones'}
-          </Button>
+
+          {notifActivas === null ? (
+            <div style={{ color: 'rgba(244,246,241,0.5)', fontSize: 13, textAlign: 'center', padding: '8px 0' }}>Comprobando...</div>
+          ) : notifActivas ? (
+            <>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(74,222,128,0.1)',
+                border: '1px solid rgba(74,222,128,0.35)', borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+              }}>
+                <CheckCircle2 size={18} color="#4ADE80" />
+                <span style={{ color: '#4ADE80', fontFamily: fontStack.label, fontWeight: 700, fontSize: 13 }}>
+                  Avisos activados en este dispositivo
+                </span>
+              </div>
+              <Button variant="ghost" onClick={handleDesactivarNotif} disabled={procesandoNotif} style={{ width: '100%' }}>
+                <BellOff size={16} /> {procesandoNotif ? 'Desactivando...' : 'Desactivar avisos'}
+              </Button>
+            </>
+          ) : (
+            <Button variant="brass" onClick={handleActivarNotif} disabled={procesandoNotif} style={{ width: '100%' }}>
+              <Bell size={16} /> {procesandoNotif ? 'Activando...' : 'Activar notificaciones'}
+            </Button>
+          )}
         </div>
 
         <Button variant="ghost" onClick={handleLogout} style={{ width: '100%' }}>
