@@ -5,9 +5,9 @@ import { supabase } from '../lib/supabase';
 import { getSesionGuardada, borrarSesion, tienePasswordTemporal } from '../lib/session';
 import { PALETTE, fontStack } from '../styles/tema';
 import { InstallBanner } from './InstallBanner';
-import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle, Lock as LockIcon } from 'lucide-react';
 
-let sesionCache = undefined; // undefined = todavía no comprobado en esta visita a la web
+let sesionCache = undefined;
 
 export function invalidarSesionCache() {
   sesionCache = undefined;
@@ -55,22 +55,36 @@ export function useSesion() {
   return sesion;
 }
 
+export function useTieneCarnet(sesion) {
+  const [tiene, setTiene] = useState(null); // null = comprobando, true/false = ya se sabe
+  useEffect(() => {
+    if (!sesion) return;
+    supabase.rpc('mis_socios', { p_cuenta_id: sesion.id }).then(({ data }) => {
+      setTiene((data || []).length > 0);
+    });
+  }, [sesion?.id]);
+  return tiene;
+}
+
 export function Layout({ sesion, children }) {
   const router = useRouter();
   const [avisoTemporal, setAvisoTemporal] = useState(false);
+  const tieneCarnet = useTieneCarnet(sesion);
 
   useEffect(() => {
     setAvisoTemporal(tienePasswordTemporal());
   }, [router.pathname]);
 
   const tabs = [
-    { href: '/inicio', label: 'Inicio', icon: Home },
-    { href: '/carnets', label: 'Mis carnets', icon: CreditCard },
-    { href: '/calendario', label: 'Calendario', icon: Calendar },
-    { href: '/noticias', label: 'Noticias', icon: Newspaper },
-    { href: '/cuenta', label: 'Cuenta', icon: Lock },
-    ...(sesion?.is_admin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck }] : []),
+    { href: '/inicio', label: 'Inicio', icon: Home, requiereCarnet: false },
+    { href: '/carnets', label: 'Mis carnets', icon: CreditCard, requiereCarnet: false },
+    { href: '/calendario', label: 'Calendario', icon: Calendar, requiereCarnet: true },
+    { href: '/noticias', label: 'Noticias', icon: Newspaper, requiereCarnet: true },
+    { href: '/cuenta', label: 'Cuenta', icon: Lock, requiereCarnet: false },
+    ...(sesion?.is_admin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck, requiereCarnet: false }] : []),
   ];
+
+  const paginaActualBloqueada = tabs.find((t) => t.href === router.pathname)?.requiereCarnet && tieneCarnet === false;
 
   return (
     <div style={{
@@ -88,8 +102,31 @@ export function Layout({ sesion, children }) {
           <AlertTriangle size={15} /> Estás usando una contraseña temporal. Cámbiala en "Cuenta" cuanto antes.
         </div>
       )}
-      <div style={{ flex: 1, paddingBottom: 70 }}>
+      <div style={{ flex: 1, paddingBottom: 70, position: 'relative' }}>
         {children}
+        {paginaActualBloqueada && (
+          <div style={{
+            position: 'absolute', inset: 0, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            background: 'rgba(10,10,10,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 14, padding: 30, textAlign: 'center', zIndex: 20,
+          }}>
+            <LockIcon size={32} color={PALETTE.brass} />
+            <div>
+              <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                Necesitas un carnet para ver esto
+              </div>
+              <div style={{ fontFamily: fontStack.label, color: 'rgba(244,246,241,0.7)', fontSize: 13, lineHeight: 1.5 }}>
+                Date de alta o añade un carnet existente desde "Inicio"
+              </div>
+            </div>
+            <Link href="/inicio" style={{
+              background: PALETTE.brass, color: PALETTE.ink, fontFamily: fontStack.label, fontWeight: 700,
+              fontSize: 13, padding: '10px 20px', borderRadius: 10, textDecoration: 'none',
+            }}>
+              Ir a Inicio
+            </Link>
+          </div>
+        )}
       </div>
       <InstallBanner />
       <nav style={{
@@ -100,11 +137,13 @@ export function Layout({ sesion, children }) {
         {tabs.map((t) => {
           const Icon = t.icon;
           const active = router.pathname === t.href;
+          const bloqueada = t.requiereCarnet && tieneCarnet === false;
           return (
             <Link key={t.href} href={t.href} style={{
               flex: 1, padding: '10px 4px 8px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              color: active ? PALETTE.stripeSoft : 'rgba(244,246,241,0.55)', textDecoration: 'none',
+              color: active ? PALETTE.stripeSoft : bloqueada ? 'rgba(244,246,241,0.25)' : 'rgba(244,246,241,0.55)',
+              textDecoration: 'none',
             }}>
               <Icon size={20} />
               <span style={{ fontFamily: fontStack.label, fontSize: 11.5, fontWeight: 700 }}>{t.label}</span>
