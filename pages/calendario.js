@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
+import { useConfirm } from '../components/ConfirmModal';
 import { LoadingCrest } from '../components/LoadingCrest';
 import { AsistenciaPartido } from '../components/AsistenciaPartido';
 import { PALETTE, fontStack } from '../styles/tema';
@@ -31,6 +32,7 @@ function PartidoResumen({ partido }) {
 
 export default function CalendarioPage() {
   const sesion = useSesion();
+  const [confirm, ConfirmUI] = useConfirm();
   const [partidos, setPartidos] = useState(undefined);
   const [misSocios, setMisSocios] = useState([]);
   const [expandido, setExpandido] = useState(null);
@@ -67,6 +69,7 @@ export default function CalendarioPage() {
 
   return (
     <Layout sesion={sesion}>
+      {ConfirmUI}
       <div style={{ padding: '18px 16px 40px' }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 32, margin: 0, letterSpacing: 2, color: PALETTE.chalk }}>CALENDARIO</h2>
@@ -89,7 +92,7 @@ export default function CalendarioPage() {
             </div>
             <div style={{ marginBottom: 22 }}>
               <PartidoCard partido={siguiente} destacado />
-              <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} />
+              <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
             </div>
 
             {resto.length > 0 && (
@@ -110,7 +113,7 @@ export default function CalendarioPage() {
                       {expandido === p.id && (
                         <div style={{ padding: '0 10px 12px' }}>
                           <PartidoCard partido={p} />
-                          <AsistenciaPartido partidoId={p.id} cuentaId={sesion.id} misSocios={misSocios} />
+                          <AsistenciaPartido partidoId={p.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
                         </div>
                       )}
                     </div>
