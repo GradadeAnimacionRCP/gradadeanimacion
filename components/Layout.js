@@ -60,7 +60,8 @@ export function useTieneCarnet(sesion) {
   useEffect(() => {
     if (!sesion) return;
     supabase.rpc('mis_socios', { p_cuenta_id: sesion.id }).then(({ data }) => {
-      setTiene((data || []).length > 0);
+      const aprobados = (data || []).filter((s) => s.estado_solicitud === 'aprobado');
+      setTiene(aprobados.length > 0);
     });
   }, [sesion?.id]);
   return tiene;
@@ -125,10 +126,10 @@ export function Layout({ sesion, children }) {
             <LockIcon size={32} color={PALETTE.brass} />
             <div>
               <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-                Necesitas un carnet para ver esto
+                Necesitas un carnet aprobado para ver esto
               </div>
               <div style={{ fontFamily: fontStack.label, color: 'rgba(244,246,241,0.7)', fontSize: 13, lineHeight: 1.5 }}>
-                Date de alta o añade un carnet existente desde "Inicio"
+                {tieneCarnet === false ? 'Date de alta desde "Inicio", o espera a que un admin valide tu solicitud' : ''}
               </div>
             </div>
             <Link href="/inicio" style={{
