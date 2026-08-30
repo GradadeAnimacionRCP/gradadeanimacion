@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useSesion, Layout } from '../components/Layout';
+import { useSesion, Layout, invalidarSesionCache } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
 import { LoadingCrest } from '../components/LoadingCrest';
 import { borrarSesion, marcarPasswordTemporal } from '../lib/session';
@@ -9,7 +9,7 @@ import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field, CampoPassword } from '../components/UI';
 import { LogOut, Bell, BellOff, CheckCircle2 } from 'lucide-react';
 
-const CLAVE_MAESTRA = 'CAMBIA-ESTA-CLAVE-2027'; // debe coincidir con la que pusiste en la base de datos
+const CLAVE_MAESTRA = 'gradacereceda2026'; // debe coincidir con la que pusiste en la base de datos
 
 export default function CuentaPage() {
   const sesion = useSesion();
@@ -26,7 +26,7 @@ export default function CuentaPage() {
   const [mostrarClaveMaestra, setMostrarClaveMaestra] = useState(false);
   const [errorClave, setErrorClave] = useState('');
 
-  const [notifActivas, setNotifActivas] = useState(null); // null = comprobando, true/false = ya se sabe
+  const [notifActivas, setNotifActivas] = useState(null);
   const [procesandoNotif, setProcesandoNotif] = useState(false);
   const [notifMsg, setNotifMsg] = useState('');
   const [notifError, setNotifError] = useState(false);
@@ -103,6 +103,7 @@ export default function CuentaPage() {
     if (!(await confirm('¿Cerrar sesión en este dispositivo?'))) return;
     borrarSesion();
     marcarPasswordTemporal(false);
+    invalidarSesionCache();
     window.location.href = '/';
   };
 
