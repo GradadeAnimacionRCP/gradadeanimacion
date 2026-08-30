@@ -28,7 +28,9 @@ function resultadoInfo(partido) {
   return ganamos ? { color: '#4ADE80', texto: 'Victoria' } : { color: '#ff6b6b', texto: 'Derrota' };
 }
 
-function Escudo({ src, size = 56 }) {
+function Escudo(props) {
+  var src = props.src;
+  var size = props.size || 56;
   if (src) {
     return <img src={src} alt="" style={{ width: size, height: size, objectFit: 'contain' }} />;
   }
@@ -42,18 +44,20 @@ function Escudo({ src, size = 56 }) {
   );
 }
 
-export function PartidoCard({ partido, destacado = false }) {
-  const pasado = partidoEsPasado(partido);
-  const info = resultadoInfo(partido);
-  const escudoLocal = partido.es_local ? '/escudo.png' : partido.escudo_rival;
-  const escudoVisitante = partido.es_local ? partido.escudo_rival : '/escudo.png';
-  const puntosLocal = partido.es_local ? partido.puntos_local : partido.puntos_rival;
-  const puntosVisitante = partido.es_local ? partido.puntos_rival : partido.puntos_local;
+export function PartidoCard(props) {
+  var partido = props.partido;
+  var destacado = props.destacado || false;
+  var pasado = partidoEsPasado(partido);
+  var info = resultadoInfo(partido);
+  var escudoLocal = partido.es_local ? '/escudo.png' : partido.escudo_rival;
+  var escudoVisitante = partido.es_local ? partido.escudo_rival : '/escudo.png';
+  var puntosLocal = partido.es_local ? partido.puntos_local : partido.puntos_rival;
+  var puntosVisitante = partido.es_local ? partido.puntos_rival : partido.puntos_local;
 
   return (
     <div style={{
       background: destacado ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)',
-      border: `1px solid ${info ? info.color + '55' : destacado ? 'rgba(201,162,75,0.4)' : 'rgba(244,246,241,0.12)'}`,
+      border: '1px solid ' + (info ? info.color + '55' : destacado ? 'rgba(201,162,75,0.4)' : 'rgba(244,246,241,0.12)'),
       borderRadius: 18, padding: '18px 16px', opacity: pasado ? 0.85 : 1,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 8, flexWrap: 'wrap' }}>
@@ -96,7 +100,7 @@ export function PartidoCard({ partido, destacado = false }) {
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: `${info.color}22`, border: `1px solid ${info.color}`, borderRadius: 8, padding: '4px 12px',
+            background: info.color + '22', border: '1px solid ' + info.color, borderRadius: 8, padding: '4px 12px',
           }}>
             <span style={{ color: info.color, fontFamily: fontStack.heading, fontWeight: 800, fontSize: 16 }}>{partido.resultado}</span>
             <span style={{ color: info.color, fontFamily: fontStack.label, fontWeight: 700, fontSize: 11.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>{info.texto}</span>
@@ -110,17 +114,13 @@ export function PartidoCard({ partido, destacado = false }) {
         </div>
       )}
 
-            {!pasado && partido.estadio && (
-        
-          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(partido.estadio)}`}
-          target="_blank" rel="noopener noreferrer"
-          style={{
+      {!pasado && partido.estadio && (
+        <a href={"https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(partido.estadio)} target="_blank" rel="noopener noreferrer" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
             padding: '10px 0', borderRadius: 10, textDecoration: 'none',
             background: 'rgba(201,162,75,0.12)', border: '1px solid rgba(201,162,75,0.35)',
             color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
-          }}
-        >
+          }}>
           <Navigation size={15} /> Cómo llegar
         </a>
       )}
