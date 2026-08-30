@@ -41,7 +41,10 @@ export function CarnetCard({ socio }) {
             backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           }}>
             {fondo && (
-              <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${fondo})`, backgroundSize: 'cover', backgroundPosition: 'center 35%' }} />
+              <div style={{
+                position: 'absolute', inset: 0, backgroundImage: `url(${fondo})`, backgroundSize: 'cover', backgroundPosition: 'center 35%',
+                opacity: fondo ? 1 : 0, transition: 'opacity 0.6s ease',
+              }} />
             )}
             <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(165deg, ${PALETTE.pitch}66 0%, ${PALETTE.pitchDark}99 78%)` }} />
             <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${PALETTE.ink}80 0%, transparent 22%, transparent 78%, ${PALETTE.ink}80 100%)` }} />
