@@ -220,7 +220,8 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
 
         {carnet && <AvisoCarnet socio={carnet} />}
 
-        <div style={{ ...authCardStyle, marginBottom: 18 }}>
+        <Link href="/calendario" style={{ textDecoration: 'none' }}>
+        <div style={{ ...authCardStyle, marginBottom: 18, cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
             <CalendarIcon size={16} color={PALETTE.brass} />
             <span style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
@@ -252,6 +253,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
             <CuentaAtrasPartido partido={null} />
           )}
         </div>
+        </Link>
 
         <BloqueResultadoYRacha jugados={jugados} />
 
