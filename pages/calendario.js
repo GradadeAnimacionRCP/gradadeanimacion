@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { useSesion, Layout } from '../components/Layout';
+import { useSesion, Layout, usePendientesGradaCar } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
 import { LoadingCrest } from '../components/LoadingCrest';
 import { AsistenciaPartido } from '../components/AsistenciaPartido';
@@ -31,17 +31,6 @@ function PartidoResumen({ partido }) {
   );
 }
 
-function tabPillStyle(active) {
-  return {
-    flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', gap: 6,
-    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
-    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
-    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
-    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
-  };
-}
-
 export default function CalendarioPage() {
   const sesion = useSesion();
   const [confirm, ConfirmUI] = useConfirm();
@@ -50,6 +39,7 @@ export default function CalendarioPage() {
   const [misSocios, setMisSocios] = useState([]);
   const [expandido, setExpandido] = useState(null);
   const [verJugados, setVerJugados] = useState(false);
+  const pendientesGradaCar = usePendientesGradaCar(sesion);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.from('partidos').select('*').order('fecha', { ascending: true, nullsFirst: false });
@@ -80,6 +70,15 @@ export default function CalendarioPage() {
   const siguiente = proximos[0];
   const resto = proximos.slice(1);
 
+  const pillStyle = (active) => ({
+    flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex', position: 'relative',
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
+    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
+    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
+  });
+
   return (
     <Layout sesion={sesion}>
       {ConfirmUI}
@@ -90,11 +89,17 @@ export default function CalendarioPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          <button onClick={() => setVista('calendario')} style={tabPillStyle(vista === 'calendario')}>
+          <button onClick={() => setVista('calendario')} style={pillStyle(vista === 'calendario')}>
             <Calendar size={14} /> Calendario
           </button>
-          <button onClick={() => setVista('gradacar')} style={tabPillStyle(vista === 'gradacar')}>
+          <button onClick={() => setVista('gradacar')} style={pillStyle(vista === 'gradacar')}>
             <Car size={14} /> GradaCar
+            {pendientesGradaCar > 0 && (
+              <span style={{
+                position: 'absolute', top: 4, right: 10, width: 8, height: 8, borderRadius: '50%',
+                background: PALETTE.flare, border: `2px solid ${PALETTE.pitchDark}`,
+              }} />
+            )}
           </button>
         </div>
 
