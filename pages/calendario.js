@@ -10,7 +10,9 @@ function PartidoResumen({ partido }) {
   const titulo = partido.es_local ? `vs ${partido.rival}` : `vs ${partido.rival} (fuera)`;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px' }}>
-      <span style={{ fontSize: 15, flexShrink: 0 }}>{partido.es_local ? '🏠' : '✈️'}</span>
+      <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0, lineHeight: 1 }}>
+        {partido.es_local ? '🏠' : '✈️'}
+      </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: fontStack.heading, fontWeight: 600, fontSize: 13.5, color: PALETTE.chalk }}>
           {titulo}
