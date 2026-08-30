@@ -22,6 +22,16 @@ export function ProductoCard({ producto }) {
               Agotado
             </div>
           )}
+          {!producto.agotado && producto.proximamente && (
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-8deg)',
+              background: 'rgba(201,162,75,0.95)', color: PALETTE.ink, fontFamily: fontStack.label,
+              fontWeight: 800, fontSize: 15, letterSpacing: 2, padding: '6px 18px', borderRadius: 6,
+              textTransform: 'uppercase', boxShadow: '0 6px 16px -4px rgba(0,0,0,0.6)',
+            }}>
+              Próximamente
+            </div>
+          )}
         </div>
       )}
       <div style={{ padding: '12px 14px' }}>
