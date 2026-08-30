@@ -53,7 +53,8 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
   useEffect(() => { cargarMisSolicitudes(); }, [cargarMisSolicitudes]);
 
   const cargarSolicitantes = useCallback(async () => {
-    const { data } = await supabase.rpc('listar_solicitudes_de_viaje', { p_cuenta_id: sesion.id, p_viaje_id: viaje.id });
+    const { data, error } = await supabase.rpc('listar_solicitudes_de_viaje', { p_cuenta_id: sesion.id, p_viaje_id: viaje.id });
+    if (error) console.error('Error cargando solicitantes:', error);
     setSolicitantes(data || []);
   }, [sesion.id, viaje.id]);
 
@@ -72,7 +73,13 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
       enviarPushCoche({
         cuentaId: solicitud.cuenta_id,
         title: '✅ ¡Plaza confirmada!',
-        body: `El conductor ha confirmado tu plaza para el próximo partido.`,
+        body: 'El conductor ha confirmado tu plaza para el próximo partido.',
+      });
+    } else {
+      enviarPushCoche({
+        cuentaId: solicitud.cuenta_id,
+        title: '❌ Solicitud rechazada',
+        body: 'El conductor no ha podido aceptar tu solicitud de plaza esta vez.',
       });
     }
     cargarSolicitantes();
@@ -386,7 +393,7 @@ function NuevoViajeForm({ partidoId, sesion, misSocios, onCreado, onCancelar }) 
         <input type="tel" style={inputStyle} value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 600123456" />
       </Field>
       {error && <div style={{ color: '#ff8a8a', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
         <Button variant="ghost" onClick={onCancelar} disabled={guardando} style={{ flex: 1 }}>Cancelar</Button>
         <Button variant="primary" onClick={handleCrear} disabled={guardando} style={{ flex: 1 }}>
           {guardando ? 'Publicando...' : 'Publicar'}
