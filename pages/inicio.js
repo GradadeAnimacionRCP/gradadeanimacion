@@ -3,11 +3,12 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { LoadingCrest } from '../components/LoadingCrest';
 import { CuentaAtrasPartido } from '../components/CuentaAtrasPartido';
+import { getEscudoRacing } from '../lib/config';
 import { saludoActual, primerCarnet, fechaInicioSocio, formatAntiguedad } from '../lib/perfil';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field } from '../components/UI';
 import { CropModal } from '../components/CropModal';
-import { UserPlus, Search, Camera, Users, Calendar as CalendarIcon, Award } from 'lucide-react';
+import { UserPlus, Search, Camera, Users, Calendar as CalendarIcon, Award, Shield } from 'lucide-react';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -34,18 +35,37 @@ function prepararFotoParaRecorte(file) {
   });
 }
 
+function EscudoMini({ src, size = 42 }) {
+  if (src) {
+    return <img src={src} alt="" style={{ width: size, height: size, objectFit: 'contain' }} />;
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: 'rgba(255,255,255,0.06)',
+      border: '1px solid rgba(244,246,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <Shield size={size * 0.5} color="rgba(244,246,241,0.35)" />
+    </div>
+  );
+}
+
 function PerfilInicio({ sesion, misSociosAprobados }) {
   const [proximoPartido, setProximoPartido] = useState(undefined);
+  const [escudoRacing, setEscudoRacing] = useState(null);
 
   useEffect(() => {
     supabase.from('partidos').select('*').is('resultado', null)
       .order('fecha', { ascending: true, nullsFirst: false }).limit(1)
       .then(({ data }) => setProximoPartido(data && data[0] ? data[0] : null));
+    getEscudoRacing().then(setEscudoRacing);
   }, []);
 
   const carnet = primerCarnet(misSociosAprobados);
   const nombreMostrar = carnet ? carnet.nombre : sesion.usuario;
   const antiguedad = carnet ? formatAntiguedad(fechaInicioSocio(carnet)) : '';
+
+  const escudoLocal = proximoPartido?.es_local ? escudoRacing : proximoPartido?.escudo_rival;
+  const escudoVisitante = proximoPartido?.es_local ? proximoPartido?.escudo_rival : escudoRacing;
 
   return (
     <div style={{ padding: '18px 18px 30px' }}>
@@ -74,15 +94,27 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
         </div>
         {proximoPartido === undefined ? (
           <div style={{ textAlign: 'center', color: 'rgba(244,246,241,0.5)', fontSize: 13 }}>Cargando...</div>
-        ) : (
+        ) : proximoPartido ? (
           <>
-            {proximoPartido && (
-              <div style={{ textAlign: 'center', fontSize: 13.5, color: PALETTE.chalk, marginBottom: 10, fontFamily: fontStack.heading, fontWeight: 600 }}>
-                {proximoPartido.es_local ? `vs ${proximoPartido.rival}` : `${proximoPartido.rival} (fuera)`}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <EscudoMini src={escudoLocal} />
+                <span style={{ fontSize: 11, fontFamily: fontStack.label, color: 'rgba(244,246,241,0.65)', textAlign: 'center' }}>
+                  {proximoPartido.es_local ? 'Racing' : proximoPartido.rival}
+                </span>
               </div>
-            )}
+              <span style={{ fontFamily: fontStack.display, fontSize: 16, color: 'rgba(244,246,241,0.35)' }}>VS</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <EscudoMini src={escudoVisitante} />
+                <span style={{ fontSize: 11, fontFamily: fontStack.label, color: 'rgba(244,246,241,0.65)', textAlign: 'center' }}>
+                  {proximoPartido.es_local ? proximoPartido.rival : 'Racing'}
+                </span>
+              </div>
+            </div>
             <CuentaAtrasPartido partido={proximoPartido} />
           </>
+        ) : (
+          <CuentaAtrasPartido partido={null} />
         )}
       </div>
 
