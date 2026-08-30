@@ -297,8 +297,9 @@ function FormularioAnadirCarnet({ sesion, onCerrar, onCambio }) {
     }
     const carnet = data[0];
     if (!carnet.cuenta_id || carnet.cuenta_id === sesion.id) {
-      await supabase.from('socios').update({ cuenta_id: sesion.id }).eq('id', carnet.id);
+      const { error: claimError } = await supabase.rpc('reclamar_carnet', { p_cuenta_id: sesion.id, p_id: carnet.id });
       setBusCargando(false);
+      if (claimError) { setBusError('No se pudo añadir el carnet: ' + claimError.message); return; }
       setBusInfo('¡Carnet añadido a tu cuenta!');
       setBusId(''); setBusApellido('');
       onCambio();
@@ -341,7 +342,7 @@ export default function Carnets() {
   const [confirm, ConfirmUI] = useConfirm();
   const [socios, setSocios] = useState(undefined);
   const [vista, setVista] = useState('actuales');
-  const [formularioAbierto, setFormularioAbierto] = useState(null); // null | 'nuevo' | 'anadir'
+  const [formularioAbierto, setFormularioAbierto] = useState(null);
 
   const cargar = useCallback(async (cuentaId) => {
     const { data, error } = await supabase.rpc('mis_socios', { p_cuenta_id: cuentaId });
