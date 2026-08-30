@@ -9,15 +9,18 @@ import { Calendar, ChevronDown } from 'lucide-react';
 function PartidoResumen({ partido }) {
   const titulo = partido.es_local ? `vs ${partido.rival}` : `vs ${partido.rival} (fuera)`;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px' }}>
-      <div style={{ width: 20, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+    <div style={{
+      display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start',
+      gap: 10, padding: '10px 4px', flex: 1, minWidth: 0,
+    }}>
+      <div style={{ width: 20, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <IconoLocalizacion esLocal={partido.es_local} size={16} />
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: fontStack.heading, fontWeight: 600, fontSize: 13.5, color: PALETTE.chalk }}>
+      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+        <div style={{ fontFamily: fontStack.heading, fontWeight: 600, fontSize: 13.5, color: PALETTE.chalk, textAlign: 'left' }}>
           {titulo}
         </div>
-        <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label }}>
+        <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, textAlign: 'left' }}>
           {formatFechaPartido(partido.fecha, partido.hora)}
         </div>
       </div>
@@ -88,10 +91,13 @@ export default function CalendarioPage() {
                     <div key={p.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, overflow: 'hidden' }}>
                       <button
                         onClick={() => setExpandido(expandido === p.id ? null : p.id)}
-                        style={{ width: '100%', background: 'none', border: 'none', padding: '2px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        style={{
+                          width: '100%', background: 'none', border: 'none', padding: '2px 12px', cursor: 'pointer',
+                          display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                        }}
                       >
                         <PartidoResumen partido={p} />
-                        <ChevronDown size={18} color="rgba(244,246,241,0.5)" style={{ transform: expandido === p.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+                        <ChevronDown size={18} color="rgba(244,246,241,0.5)" style={{ transform: expandido === p.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0, marginLeft: 8 }} />
                       </button>
                       {expandido === p.id && (
                         <div style={{ padding: '0 10px 12px' }}>
