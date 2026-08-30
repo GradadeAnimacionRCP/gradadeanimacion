@@ -3,11 +3,37 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
 import { LoadingCrest } from '../components/LoadingCrest';
-import { PALETTE, fontStack } from '../styles/tema';
-import { Button } from '../components/UI';
+import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
+import { Button, Field } from '../components/UI';
 import { CarnetCard } from '../components/CarnetCard';
+import { CropModal } from '../components/CropModal';
 import { formatNumeroSocio, formatFecha, solicitudEstado, estadoMember, ESTADO_COLOR } from '../lib/socios';
-import { CreditCard, LogOut, Camera, Trash2 } from 'lucide-react';
+import { CreditCard, LogOut, Camera, Trash2, UserPlus, Search } from 'lucide-react';
+
+const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
+
+function prepararFotoParaRecorte(file) {
+  const MAX_LADO = 1600;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Este formato de imagen no se puede abrir. Prueba con un JPG o PNG.'));
+      img.onload = () => {
+        const maxLado = Math.max(img.width, img.height);
+        const escala = Math.min(1, MAX_LADO / maxLado);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * escala);
+        canvas.height = Math.round(img.height * escala);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function prepararComprobante(file) {
   const MAX_LADO = 1000;
@@ -167,11 +193,155 @@ function TarjetaSocio({ socio, cuentaId, onCambio, confirm }) {
   );
 }
 
+function FormularioNuevoSocio({ sesion, onCerrar }) {
+  const [nombre, setNombre] = useState('');
+  const [apellidos, setApellidos] = useState('');
+  const [foto, setFoto] = useState(null);
+  const [cropSrc, setCropSrc] = useState(null);
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleFoto = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setError('');
+    try {
+      setCropSrc(await prepararFotoParaRecorte(f));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(''); setOk('');
+    if (!NOMBRE_REGEX.test(nombre.trim()) || !NOMBRE_REGEX.test(apellidos.trim())) {
+      setError('Introduce un nombre y apellidos válidos.');
+      return;
+    }
+    setCargando(true);
+    const { data, error } = await supabase.rpc('registrar_socio', {
+      p_cuenta_id: sesion.id, p_nombre: nombre, p_apellidos: apellidos, p_foto: foto,
+    });
+    setCargando(false);
+    if (error) { setError(error.message); return; }
+    setOk(`¡Carnet ${data.id} creado! Está pendiente de que un admin lo valide.`);
+    setNombre(''); setApellidos(''); setFoto(null);
+  };
+
+  return (
+    <div style={authCardStyle}>
+      {cropSrc && (
+        <CropModal src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={(dataUrl) => { setFoto(dataUrl); setCropSrc(null); }} />
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <UserPlus size={18} color={PALETTE.stripeSoft} />
+        <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Nuevo socio</h2>
+      </div>
+      <form onSubmit={handleSubmit}>
+        <Field label="Nombre">
+          <input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        </Field>
+        <Field label="Apellidos">
+          <input style={inputStyle} value={apellidos} onChange={(e) => setApellidos(e.target.value)} />
+        </Field>
+        <Field label="Fotografía (opcional)">
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleFoto}
+            style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div onClick={() => fileRef.current?.click()} style={{
+              width: 60, height: 60, borderRadius: 12, border: `2px dashed ${PALETTE.brass}`, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'rgba(255,255,255,0.05)',
+            }}>
+              {foto ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={22} color={PALETTE.brass} />}
+            </div>
+            <Button type="button" variant="ghost" onClick={() => fileRef.current?.click()} style={{ fontSize: 13 }}>
+              {foto ? 'Cambiar' : 'Subir foto'}
+            </Button>
+          </div>
+        </Field>
+        {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{error}</div>}
+        {ok && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{ok}</div>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button type="button" variant="ghost" onClick={onCerrar} style={{ flex: 1 }}>Cerrar</Button>
+          <Button type="submit" variant="primary" disabled={cargando} style={{ flex: 2 }}>
+            {cargando ? 'Generando...' : 'Generar mi carnet'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function FormularioAnadirCarnet({ sesion, onCerrar, onCambio }) {
+  const [busId, setBusId] = useState('');
+  const [busApellido, setBusApellido] = useState('');
+  const [busError, setBusError] = useState('');
+  const [busInfo, setBusInfo] = useState('');
+  const [busCargando, setBusCargando] = useState(false);
+
+  const handleBuscar = async (e) => {
+    e.preventDefault();
+    setBusError(''); setBusInfo('');
+    const numero = parseInt(busId.trim().toUpperCase().replace('GDA-', ''), 10);
+    if (!numero || !busApellido.trim()) { setBusError('Introduce el número de socio y los apellidos.'); return; }
+    setBusCargando(true);
+    const { data, error } = await supabase.rpc('buscar_socio', { p_numero: numero, p_apellidos: busApellido });
+    if (error || !data || data.length === 0) {
+      setBusCargando(false);
+      setBusError('No se ha encontrado ningún carnet con esos datos.');
+      return;
+    }
+    const carnet = data[0];
+    if (!carnet.cuenta_id || carnet.cuenta_id === sesion.id) {
+      await supabase.from('socios').update({ cuenta_id: sesion.id }).eq('id', carnet.id);
+      setBusCargando(false);
+      setBusInfo('¡Carnet añadido a tu cuenta!');
+      setBusId(''); setBusApellido('');
+      onCambio();
+      return;
+    }
+    await supabase.rpc('solicitar_traspaso', { p_cuenta_destino: sesion.id, p_id: carnet.id });
+    setBusCargando(false);
+    setBusInfo('Este carnet pertenece a otra cuenta. Se ha enviado una solicitud de traspaso a un admin; te avisaremos cuando la confirme.');
+    setBusId(''); setBusApellido('');
+  };
+
+  return (
+    <div style={authCardStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <Search size={18} color={PALETTE.brass} />
+        <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Añadir un carnet</h2>
+      </div>
+      <form onSubmit={handleBuscar}>
+        <Field label="Número de socio">
+          <input style={inputStyle} value={busId} onChange={(e) => setBusId(e.target.value)} placeholder="GDA-0001" />
+        </Field>
+        <Field label="Apellidos">
+          <input style={inputStyle} value={busApellido} onChange={(e) => setBusApellido(e.target.value)} />
+        </Field>
+        {busError && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{busError}</div>}
+        {busInfo && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{busInfo}</div>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button type="button" variant="ghost" onClick={onCerrar} style={{ flex: 1 }}>Cerrar</Button>
+          <Button type="submit" variant="brass" disabled={busCargando} style={{ flex: 2 }}>
+            {busCargando ? 'Buscando...' : 'Buscar y añadir'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 export default function Carnets() {
   const sesion = useSesion();
   const [confirm, ConfirmUI] = useConfirm();
   const [socios, setSocios] = useState(undefined);
   const [vista, setVista] = useState('actuales');
+  const [formularioAbierto, setFormularioAbierto] = useState(null); // null | 'nuevo' | 'anadir'
 
   const cargar = useCallback(async (cuentaId) => {
     const { data, error } = await supabase.rpc('mis_socios', { p_cuenta_id: cuentaId });
@@ -195,6 +365,8 @@ export default function Carnets() {
   if (sesion === null) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff8a8a', fontFamily: fontStack.label }}>No se pudo comprobar tu sesión.</div>;
   }
+
+  const hayAlgunAprobado = (socios || []).some((s) => s.estado_solicitud === 'aprobado');
 
   return (
     <Layout sesion={sesion}>
@@ -226,7 +398,7 @@ export default function Carnets() {
         ) : socios.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, color: 'rgba(244,246,241,0.7)' }}>
             <CreditCard size={40} style={{ opacity: 0.4, marginBottom: 12 }} />
-            <p>Todavía no tienes ningún carnet en tu cuenta.</p>
+            <p>Todavía no tienes ningún carnet en tu cuenta. Ve a "Inicio" para darte de alta.</p>
           </div>
         ) : vista === 'actuales' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
@@ -249,6 +421,31 @@ export default function Carnets() {
                   }} />
                 ))
               )
+            )}
+          </div>
+        )}
+
+        {hayAlgunAprobado && vista === 'actuales' && (
+          <div style={{ marginTop: 30 }}>
+            {formularioAbierto === 'nuevo' && (
+              <div style={{ marginBottom: 16 }}>
+                <FormularioNuevoSocio sesion={sesion} onCerrar={() => setFormularioAbierto(null)} />
+              </div>
+            )}
+            {formularioAbierto === 'anadir' && (
+              <div style={{ marginBottom: 16 }}>
+                <FormularioAnadirCarnet sesion={sesion} onCerrar={() => setFormularioAbierto(null)} onCambio={() => cargar(sesion.id)} />
+              </div>
+            )}
+            {!formularioAbierto && (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Button variant="ghost" onClick={() => setFormularioAbierto('nuevo')} style={{ flex: 1, fontSize: 13 }}>
+                  <UserPlus size={15} /> Nuevo socio
+                </Button>
+                <Button variant="ghost" onClick={() => setFormularioAbierto('anadir')} style={{ flex: 1, fontSize: 13 }}>
+                  <Search size={15} /> Añadir un carnet
+                </Button>
+              </div>
             )}
           </div>
         )}
