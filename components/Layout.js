@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { getSesionGuardada, borrarSesion, tienePasswordTemporal } from '../lib/session';
 import { PALETTE, fontStack } from '../styles/tema';
-import { InstallBanner } from './InstallBanner';
 import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle, Lock as LockIcon } from 'lucide-react';
 
 let sesionCache = undefined;
@@ -153,7 +152,6 @@ export function Layout({ sesion, children }) {
           </div>
         )}
       </div>
-      <InstallBanner />
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex',
         background: 'rgba(7,40,28,0.92)', backdropFilter: 'blur(10px)',
