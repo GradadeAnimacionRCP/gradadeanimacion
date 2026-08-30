@@ -7,11 +7,22 @@ import { PALETTE, fontStack } from '../styles/tema';
 import { InstallBanner } from './InstallBanner';
 import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle } from 'lucide-react';
 
+let sesionCache = undefined; // undefined = todavía no comprobado en esta visita a la web
+
+export function invalidarSesionCache() {
+  sesionCache = undefined;
+}
+
 export function useSesion() {
   const router = useRouter();
-  const [sesion, setSesion] = useState(undefined);
+  const [sesion, setSesion] = useState(sesionCache);
 
   useEffect(() => {
+    if (sesionCache !== undefined) {
+      setSesion(sesionCache);
+      return;
+    }
+
     const id = getSesionGuardada();
     if (!id) {
       router.replace('/');
@@ -29,12 +40,14 @@ export function useSesion() {
           borrarSesion();
           router.replace('/');
         } else {
+          sesionCache = data;
           setSesion(data);
         }
       })
       .catch((err) => {
         clearTimeout(timeoutId);
         console.error('Error comprobando sesión:', err);
+        sesionCache = null;
         setSesion(null);
       });
   }, []);
