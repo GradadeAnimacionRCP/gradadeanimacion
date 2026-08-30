@@ -5,10 +5,12 @@ import { LoadingCrest } from '../components/LoadingCrest';
 import { CuentaAtrasPartido } from '../components/CuentaAtrasPartido';
 import { getEscudoRacing } from '../lib/config';
 import { saludoActual, primerCarnet, fechaInicioSocio, formatAntiguedad } from '../lib/perfil';
+import { estadoMember, ESTADO_COLOR, ESTADO_LABEL, formatNumeroSocio } from '../lib/socios';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field } from '../components/UI';
 import { CropModal } from '../components/CropModal';
-import { UserPlus, Search, Camera, Users, Calendar as CalendarIcon, Award, Shield } from 'lucide-react';
+import { UserPlus, Search, Camera, Users, Calendar as CalendarIcon, Award, Shield, AlertTriangle, Newspaper, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -49,14 +51,137 @@ function EscudoMini({ src, size = 42 }) {
   );
 }
 
+function resultadoInfo(partido) {
+  if (!partido || !partido.resultado) return null;
+  const partes = partido.resultado.split('-').map((n) => parseInt(n.trim(), 10));
+  if (partes.length !== 2 || partes.some(isNaN)) return null;
+  const [golesA, golesB] = partes;
+  if (golesA === golesB) return { color: '#FFD24C', texto: 'Empate', gano: null };
+  const ganamos = partido.es_local ? golesA > golesB : golesB > golesA;
+  return ganamos ? { color: '#4ADE80', texto: 'Victoria', gano: true } : { color: '#ff6b6b', texto: 'Derrota', gano: false };
+}
+
+function calcularRacha(jugados) {
+  if (!jugados || jugados.length === 0) return null;
+  let racha = 0;
+  let tipo = null;
+  for (const p of jugados) {
+    const info = resultadoInfo(p);
+    if (!info || info.gano === null) break;
+    if (tipo === null) tipo = info.gano;
+    if (info.gano !== tipo) break;
+    racha++;
+  }
+  if (racha === 0) return null;
+  return { racha, ganando: tipo };
+}
+
+function BloqueResultadoYRacha({ jugados }) {
+  if (!jugados || jugados.length === 0) return null;
+  const ultimo = jugados[0];
+  const info = resultadoInfo(ultimo);
+  if (!info) return null;
+  const racha = calcularRacha(jugados);
+
+  return (
+    <div style={{ ...authCardStyle, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{
+        width: 50, height: 50, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `${info.color}22`, border: `2px solid ${info.color}`,
+      }}>
+        <span style={{ fontFamily: fontStack.heading, fontWeight: 800, fontSize: 14, color: info.color }}>{ultimo.resultado}</span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, marginBottom: 2 }}>
+          Último partido {ultimo.es_local ? `vs ${ultimo.rival}` : `en ${ultimo.rival}`}
+        </div>
+        <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 14.5, color: info.color }}>
+          {info.texto}
+        </div>
+      </div>
+      {racha && racha.racha > 1 && (
+        <div style={{
+          fontFamily: fontStack.label, fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap',
+          color: racha.ganando ? '#4ADE80' : '#ff6b6b',
+        }}>
+          {racha.ganando ? '🔥' : '🥶'} {racha.racha} seguidas
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AvisoCarnet({ socio }) {
+  const est = estadoMember(socio);
+  if (est === 'activo') return null;
+  return (
+    <Link href="/carnets" style={{ textDecoration: 'none' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '12px 14px',
+        background: `${ESTADO_COLOR[est]}18`, border: `1px solid ${ESTADO_COLOR[est]}55`, borderRadius: 14,
+      }}>
+        <AlertTriangle size={18} color={ESTADO_COLOR[est]} style={{ flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 13.5, color: PALETTE.chalk }}>
+            Tu carnet {formatNumeroSocio(socio.numero_socio)} está {ESTADO_LABEL[est].toLowerCase()}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
+            Toca para ver más
+          </div>
+        </div>
+        <ChevronRight size={18} color="rgba(244,246,241,0.4)" style={{ flexShrink: 0 }} />
+      </div>
+    </Link>
+  );
+}
+
+function UltimaNoticia({ noticia }) {
+  if (!noticia) return null;
+  return (
+    <Link href="/noticias" style={{ textDecoration: 'none' }}>
+      <div style={{
+        ...authCardStyle, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 12,
+        cursor: 'pointer',
+      }}>
+        {noticia.imagen ? (
+          <img src={noticia.imagen} alt="" style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 48, height: 48, borderRadius: 10, background: 'rgba(201,162,75,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Newspaper size={20} color={PALETTE.brass} />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, color: PALETTE.brass, fontFamily: fontStack.label, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, marginBottom: 2 }}>
+            Última noticia
+          </div>
+          <div style={{ fontFamily: fontStack.heading, fontWeight: 600, fontSize: 13.5, color: PALETTE.chalk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {noticia.titulo}
+          </div>
+        </div>
+        <ChevronRight size={18} color="rgba(244,246,241,0.4)" style={{ flexShrink: 0 }} />
+      </div>
+    </Link>
+  );
+}
+
 function PerfilInicio({ sesion, misSociosAprobados }) {
   const [proximoPartido, setProximoPartido] = useState(undefined);
+  const [jugados, setJugados] = useState(undefined);
+  const [ultimaNoticia, setUltimaNoticia] = useState(undefined);
   const [escudoRacing, setEscudoRacing] = useState(null);
 
   useEffect(() => {
     supabase.from('partidos').select('*').is('resultado', null)
       .order('fecha', { ascending: true, nullsFirst: false }).limit(1)
       .then(({ data }) => setProximoPartido(data && data[0] ? data[0] : null));
+
+    supabase.from('partidos').select('*').not('resultado', 'is', null)
+      .order('fecha', { ascending: false }).limit(5)
+      .then(({ data }) => setJugados(data || []));
+
+    supabase.from('noticias').select('*').order('fecha', { ascending: false }).limit(1)
+      .then(({ data }) => setUltimaNoticia(data && data[0] ? data[0] : null));
+
     getEscudoRacing().then(setEscudoRacing);
   }, []);
 
@@ -68,70 +193,85 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
   const escudoVisitante = proximoPartido?.es_local ? proximoPartido?.escudo_rival : escudoRacing;
 
   return (
-    <div style={{ padding: '18px 18px 30px' }}>
-      <div style={{ ...authCardStyle, textAlign: 'center', marginBottom: 18 }}>
-        <div style={{
-          width: 74, height: 74, borderRadius: '50%', margin: '0 auto 14px', overflow: 'hidden',
-          border: `2px solid ${PALETTE.brass}`, background: 'rgba(255,255,255,0.06)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {carnet?.foto ? <img src={carnet.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={32} color={PALETTE.chalk} opacity={0.5} />}
-        </div>
-        <div style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>
-          {saludoActual()}
-        </div>
-        <div style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 30, color: PALETTE.chalk, letterSpacing: 1 }}>
-          {nombreMostrar}
-        </div>
+    <div style={{ padding: '18px 18px 30px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{
+        position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)',
+        width: 380, height: 380, opacity: 0.06, pointerEvents: 'none', zIndex: 0,
+      }}>
+        <img src="/escudo.png" alt="" style={{ width: '100%', height: '100%' }} />
       </div>
 
-      <div style={{ ...authCardStyle, marginBottom: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
-          <CalendarIcon size={16} color={PALETTE.brass} />
-          <span style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
-            Próximo partido
-          </span>
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ ...authCardStyle, textAlign: 'center', marginBottom: 18 }}>
+          <div style={{
+            width: 74, height: 74, borderRadius: '50%', margin: '0 auto 14px', overflow: 'hidden',
+            border: `2px solid ${PALETTE.brass}`, background: 'rgba(255,255,255,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {carnet?.foto ? <img src={carnet.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={32} color={PALETTE.chalk} opacity={0.5} />}
+          </div>
+          <div style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>
+            {saludoActual()}
+          </div>
+          <div style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 30, color: PALETTE.chalk, letterSpacing: 1 }}>
+            {nombreMostrar}
+          </div>
         </div>
-        {proximoPartido === undefined ? (
-          <div style={{ textAlign: 'center', color: 'rgba(244,246,241,0.5)', fontSize: 13 }}>Cargando...</div>
-        ) : proximoPartido ? (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <EscudoMini src={escudoLocal} />
-                <span style={{ fontSize: 11, fontFamily: fontStack.label, color: 'rgba(244,246,241,0.65)', textAlign: 'center' }}>
-                  {proximoPartido.es_local ? 'Racing' : proximoPartido.rival}
-                </span>
+
+        {carnet && <AvisoCarnet socio={carnet} />}
+
+        <div style={{ ...authCardStyle, marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
+            <CalendarIcon size={16} color={PALETTE.brass} />
+            <span style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
+              Próximo partido
+            </span>
+          </div>
+          {proximoPartido === undefined ? (
+            <div style={{ textAlign: 'center', color: 'rgba(244,246,241,0.5)', fontSize: 13 }}>Cargando...</div>
+          ) : proximoPartido ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <EscudoMini src={escudoLocal} />
+                  <span style={{ fontSize: 11, fontFamily: fontStack.label, color: 'rgba(244,246,241,0.65)', textAlign: 'center' }}>
+                    {proximoPartido.es_local ? 'Racing' : proximoPartido.rival}
+                  </span>
+                </div>
+                <span style={{ fontFamily: fontStack.display, fontSize: 16, color: 'rgba(244,246,241,0.35)' }}>VS</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <EscudoMini src={escudoVisitante} />
+                  <span style={{ fontSize: 11, fontFamily: fontStack.label, color: 'rgba(244,246,241,0.65)', textAlign: 'center' }}>
+                    {proximoPartido.es_local ? proximoPartido.rival : 'Racing'}
+                  </span>
+                </div>
               </div>
-              <span style={{ fontFamily: fontStack.display, fontSize: 16, color: 'rgba(244,246,241,0.35)' }}>VS</span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <EscudoMini src={escudoVisitante} />
-                <span style={{ fontSize: 11, fontFamily: fontStack.label, color: 'rgba(244,246,241,0.65)', textAlign: 'center' }}>
-                  {proximoPartido.es_local ? proximoPartido.rival : 'Racing'}
-                </span>
-              </div>
+              <CuentaAtrasPartido partido={proximoPartido} />
+            </>
+          ) : (
+            <CuentaAtrasPartido partido={null} />
+          )}
+        </div>
+
+        <BloqueResultadoYRacha jugados={jugados} />
+
+        <UltimaNoticia noticia={ultimaNoticia} />
+
+        {antiguedad && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(201,162,75,0.15), rgba(200,30,44,0.1))',
+            border: '1px solid rgba(201,162,75,0.35)', borderRadius: 18, padding: '18px 20px', textAlign: 'center',
+          }}>
+            <Award size={22} color={PALETTE.brass} style={{ marginBottom: 8 }} />
+            <div style={{ fontFamily: fontStack.label, fontSize: 11.5, color: 'rgba(244,246,241,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+              Llevas con la grada
             </div>
-            <CuentaAtrasPartido partido={proximoPartido} />
-          </>
-        ) : (
-          <CuentaAtrasPartido partido={null} />
+            <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 18, color: PALETTE.chalk }}>
+              {antiguedad}
+            </div>
+          </div>
         )}
       </div>
-
-      {antiguedad && (
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(201,162,75,0.15), rgba(200,30,44,0.1))',
-          border: '1px solid rgba(201,162,75,0.35)', borderRadius: 18, padding: '18px 20px', textAlign: 'center',
-        }}>
-          <Award size={22} color={PALETTE.brass} style={{ marginBottom: 8 }} />
-          <div style={{ fontFamily: fontStack.label, fontSize: 11.5, color: 'rgba(244,246,241,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-            Llevas con la grada
-          </div>
-          <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 18, color: PALETTE.chalk }}>
-            {antiguedad}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
