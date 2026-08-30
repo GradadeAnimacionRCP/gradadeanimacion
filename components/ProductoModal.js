@@ -10,16 +10,30 @@ function prepararImagenProducto(file) {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
     reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Formato de imagen no admitido.'));
+      const img = document.createElement('img');
+      img.style.position = 'fixed';
+      img.style.top = '-9999px';
+      img.style.opacity = '0';
+      const limpiar = () => { if (img.parentNode) img.parentNode.removeChild(img); };
+      img.onerror = () => { limpiar(); reject(new Error('Formato de imagen no admitido.')); };
       img.onload = () => {
-        const escala = Math.min(1, MAX_LADO / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * escala);
-        canvas.height = Math.round(img.height * escala);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        try {
+          const ancho = img.naturalWidth || img.width;
+          const alto = img.naturalHeight || img.height;
+          const escala = Math.min(1, MAX_LADO / Math.max(ancho, alto));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(ancho * escala);
+          canvas.height = Math.round(alto * escala);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          limpiar();
+          resolve(dataUrl);
+        } catch (err) {
+          limpiar();
+          reject(new Error('No se pudo procesar la imagen.'));
+        }
       };
+      document.body.appendChild(img);
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
@@ -32,6 +46,7 @@ export function ProductoModal({ producto, onClose, onSaved }) {
   const [precio, setPrecio] = useState(producto.precio || '');
   const [imagen, setImagen] = useState(producto.imagen || null);
   const [agotado, setAgotado] = useState(producto.agotado || false);
+  const [proximamente, setProximamente] = useState(producto.proximamente || false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef(null);
@@ -47,7 +62,7 @@ export function ProductoModal({ producto, onClose, onSaved }) {
   const handleSave = async () => {
     if (!nombre.trim() || !precio) return;
     setSaving(true);
-    const registro = { nombre: nombre.trim(), precio: parseFloat(precio), imagen: imagen || null, agotado };
+    const registro = { nombre: nombre.trim(), precio: parseFloat(precio), imagen: imagen || null, agotado, proximamente };
     const { error } = esNuevo
       ? await supabase.from('productos').insert(registro)
       : await supabase.from('productos').update(registro).eq('id', producto.id);
@@ -81,6 +96,11 @@ export function ProductoModal({ producto, onClose, onSaved }) {
             <Button type="button" variant="ghost" onClick={() => fileRef.current?.click()} style={{ width: '100%' }}><Camera size={15} /> Añadir foto</Button>
           )}
         </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'rgba(244,246,241,0.8)', marginBottom: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={proximamente} onChange={(e) => setProximamente(e.target.checked)} />
+          Marcar como "Próximamente"
+        </label>
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'rgba(244,246,241,0.8)', marginBottom: 16, cursor: 'pointer' }}>
           <input type="checkbox" checked={agotado} onChange={(e) => setAgotado(e.target.checked)} />
