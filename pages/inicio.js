@@ -169,8 +169,9 @@ function FormulariosAlta({ sesion }) {
     }
     const carnet = data[0];
     if (!carnet.cuenta_id || carnet.cuenta_id === sesion.id) {
-      await supabase.from('socios').update({ cuenta_id: sesion.id }).eq('id', carnet.id);
+      const { error: claimError } = await supabase.rpc('reclamar_carnet', { p_cuenta_id: sesion.id, p_id: carnet.id });
       setBusCargando(false);
+      if (claimError) { setBusError('No se pudo añadir el carnet: ' + claimError.message); return; }
       setBusInfo('¡Carnet añadido a tu cuenta! Ya lo puedes ver en "Mis carnets".');
       setBusId(''); setBusApellido('');
       return;
