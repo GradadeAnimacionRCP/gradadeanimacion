@@ -31,6 +31,17 @@ function PartidoResumen({ partido }) {
   );
 }
 
+function tabPillStyle(active) {
+  return {
+    flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex', position: 'relative',
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
+    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
+    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
+  };
+}
+
 export default function CalendarioPage() {
   const sesion = useSesion();
   const [confirm, ConfirmUI] = useConfirm();
@@ -70,29 +81,24 @@ export default function CalendarioPage() {
   const siguiente = proximos[0];
   const resto = proximos.slice(1);
 
-  const pillStyle = (active) => ({
-    flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex', position: 'relative',
-    alignItems: 'center', justifyContent: 'center', gap: 6,
-    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
-    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
-    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
-    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
-  });
-
   return (
     <Layout sesion={sesion}>
       {ConfirmUI}
       <div style={{ padding: '18px 16px 40px' }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 32, margin: 0, letterSpacing: 2, color: PALETTE.chalk }}>CALENDARIO</h2>
-          <p style={{ color: 'rgba(244,246,241,0.6)', fontSize: 13.5, marginTop: 4 }}>Partidos en casa y fuera de la temporada</p>
+          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 32, margin: 0, letterSpacing: 2, color: PALETTE.chalk }}>
+            {vista === 'calendario' ? 'CALENDARIO' : 'GRADACAR'}
+          </h2>
+          <p style={{ color: 'rgba(244,246,241,0.6)', fontSize: 13.5, marginTop: 4 }}>
+            {vista === 'calendario' ? 'Partidos en casa y fuera de la temporada' : 'Comparte coche con la grada para el próximo partido'}
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          <button onClick={() => setVista('calendario')} style={pillStyle(vista === 'calendario')}>
+          <button onClick={() => setVista('calendario')} style={tabPillStyle(vista === 'calendario')}>
             <Calendar size={14} /> Calendario
           </button>
-          <button onClick={() => setVista('gradacar')} style={pillStyle(vista === 'gradacar')}>
+          <button onClick={() => setVista('gradacar')} style={tabPillStyle(vista === 'gradacar')}>
             <Car size={14} /> GradaCar
             {pendientesGradaCar > 0 && (
               <span style={{
