@@ -90,10 +90,21 @@ export function Layout({ sesion, children }) {
   useEffect(() => {
     if (paginaActualBloqueada) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
     } else {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
   }, [paginaActualBloqueada]);
 
   return (
@@ -118,10 +129,11 @@ export function Layout({ sesion, children }) {
         </div>
         {paginaActualBloqueada && (
           <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 70,
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-            background: 'rgba(10,10,10,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', gap: 14, padding: 30, textAlign: 'center', zIndex: 20,
+            background: 'rgba(10,10,10,0.75)', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 14, padding: 30, paddingBottom: 'calc(70px + env(safe-area-inset-bottom, 0px))',
+            textAlign: 'center', zIndex: 40,
           }}>
             <LockIcon size={32} color={PALETTE.brass} />
             <div>
@@ -129,7 +141,7 @@ export function Layout({ sesion, children }) {
                 Necesitas un carnet aprobado para ver esto
               </div>
               <div style={{ fontFamily: fontStack.label, color: 'rgba(244,246,241,0.7)', fontSize: 13, lineHeight: 1.5 }}>
-                {tieneCarnet === false ? 'Date de alta desde "Inicio", o espera a que un admin valide tu solicitud' : ''}
+                Date de alta desde "Inicio", o espera a que un admin valide tu solicitud
               </div>
             </div>
             <Link href="/inicio" style={{
