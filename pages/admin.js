@@ -240,6 +240,13 @@ export default function Admin() {
     await supabase.rpc('admin_toggle_admin', { p_admin_id: sesion.id, p_target_id: u.id });
     cargarUsuarios();
   };
+  const handleEliminarUsuario = async (u) => {
+    if (!(await confirm(`¿Eliminar la cuenta "${u.usuario}"? Si tenía algún carnet, se quedará sin dueño (podrá reclamarlo otra vez con su número y apellidos).`))) return;
+    const { error } = await supabase.rpc('admin_eliminar_usuario', { p_admin_id: sesion.id, p_target_id: u.id });
+    if (error) { alert(error.message); return; }
+    cargarUsuarios();
+    cargar();
+  };
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -625,9 +632,15 @@ export default function Admin() {
                         Registrado {formatFecha(u.created_at)}
                       </div>
                     </div>
-                    <Button variant={u.is_admin ? 'ghost' : 'brass'} onClick={() => handleToggleAdmin(u)} style={{ padding: '6px 11px', fontSize: 12.5 }}>
-                      {u.is_admin ? 'Quitar admin' : 'Hacer admin'}
-                    </Button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <Button variant={u.is_admin ? 'ghost' : 'brass'} onClick={() => handleToggleAdmin(u)} style={{ padding: '6px 11px', fontSize: 12.5 }}>
+                        {u.is_admin ? 'Quitar admin' : 'Hacer admin'}
+                      </Button>
+                      <button onClick={() => handleEliminarUsuario(u)} title="Eliminar cuenta"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 34, height: 34, color: '#ff8a8a', cursor: 'pointer', flexShrink: 0 }}>
+                        <Trash2 size={15} style={{ margin: '0 auto' }} />
+                      </button>
+                    </div>
                   </div>
 
                   {u.reset_requested && (
