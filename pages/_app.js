@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import '../styles/globals.css';
 import { activarBloqueoImagenes } from '../lib/bloqueoImagenes';
+import { InstallBanner } from '../components/InstallBanner';
 import { PALETTE, fontStack } from '../styles/tema';
 import { RotateCcw } from 'lucide-react';
 
@@ -13,6 +14,7 @@ export default function App({ Component, pageProps }) {
   return (
     <>
       <Component {...pageProps} />
+      <InstallBanner />
       <div className="gda-aviso-horizontal" style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
