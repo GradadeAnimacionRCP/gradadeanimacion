@@ -3,16 +3,16 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { LoadingCrest } from '../components/LoadingCrest';
 import { PALETTE, fontStack } from '../styles/tema';
-import { PartidoCard, partidoEsPasado, formatFechaPartido } from '../components/PartidoCard';
+import { PartidoCard, partidoEsPasado, formatFechaPartido, IconoLocalizacion } from '../components/PartidoCard';
 import { Calendar, ChevronDown } from 'lucide-react';
 
 function PartidoResumen({ partido }) {
   const titulo = partido.es_local ? `vs ${partido.rival}` : `vs ${partido.rival} (fuera)`;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px' }}>
-      <span style={{ fontSize: 15, width: 20, textAlign: 'center', flexShrink: 0, lineHeight: 1 }}>
-        {partido.es_local ? '🏠' : '✈️'}
-      </span>
+      <div style={{ width: 20, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+        <IconoLocalizacion esLocal={partido.es_local} size={16} />
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: fontStack.heading, fontWeight: 600, fontSize: 13.5, color: PALETTE.chalk }}>
           {titulo}
