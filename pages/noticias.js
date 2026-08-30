@@ -55,8 +55,12 @@ export default function NoticiasPage() {
     <Layout sesion={sesion}>
       <div style={{ padding: '18px 16px 40px' }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 32, margin: 0, letterSpacing: 2, color: PALETTE.chalk }}>NOTICIAS</h2>
-          <p style={{ color: 'rgba(244,246,241,0.6)', fontSize: 13.5, marginTop: 4 }}>Lo último de la Grada de Animación</p>
+          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 32, margin: 0, letterSpacing: 2, color: PALETTE.chalk }}>
+            {vista === 'noticias' ? 'NOTICIAS' : 'TIENDA'}
+          </h2>
+          <p style={{ color: 'rgba(244,246,241,0.6)', fontSize: 13.5, marginTop: 4 }}>
+            {vista === 'noticias' ? 'Lo último de la Grada de Animación' : 'Productos oficiales de la grada'}
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
