@@ -3,10 +3,22 @@ import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { formatNumeroSocio } from '../lib/socios';
-import { Car, Users, Phone, Plus, Trash2, Check, X, MessageCircle } from 'lucide-react';
+import { Car, Users, Plus, Trash2, Check, X, MessageCircle } from 'lucide-react';
 
 function limpiarTelefono(t) {
   return t.replace(/[^\d+]/g, '');
+}
+
+function FotoMini({ foto, size = 40 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+      background: 'rgba(201,162,75,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: `1px solid ${PALETTE.brass}55`,
+    }}>
+      {foto ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Car size={size * 0.48} color={PALETTE.brass} />}
+    </div>
+  );
 }
 
 function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
@@ -91,11 +103,11 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, filter: completo ? 'grayscale(1)' : 'none' }}>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(201,162,75,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Car size={19} color={PALETTE.brass} />
-        </div>
+        <FotoMini foto={viaje.conductor_foto} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 14.5, color: PALETTE.chalk }}>{viaje.conductor_nombre}</div>
+          <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 14.5, color: PALETTE.chalk }}>
+            {viaje.conductor_nombre} {viaje.conductor_apellidos || ''}
+          </div>
           <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, display: 'flex', alignItems: 'center', gap: 4 }}>
             <Users size={12} /> {plazasLibres > 0 ? `${plazasLibres} de ${viaje.plazas_totales} plazas libres` : `${viaje.plazas_totales} plazas · completo`}
           </div>
@@ -125,7 +137,8 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {solicitantes.length === 0 && <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center' }}>Nadie ha pedido plaza todavía.</p>}
               {solicitantes.map((s) => (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px' }}>
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px' }}>
+                  <FotoMini foto={s.foto} size={32} />
                   <span style={{ flex: 1, fontSize: 13, color: PALETTE.chalk }}>{s.nombre} {s.apellidos}</span>
                   {s.estado === 'pendiente' ? (
                     <>
@@ -181,9 +194,11 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {misSociosDisponibles.map((s) => (
                     <button key={s.id} onClick={() => handlePedirPlaza(s.id)} disabled={procesando} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
                       background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 10,
                       padding: '9px 12px', textAlign: 'left', color: PALETTE.chalk, fontSize: 13, cursor: 'pointer',
                     }}>
+                      <FotoMini foto={s.foto} size={28} />
                       {s.nombre} {s.apellidos} <span style={{ color: 'rgba(244,246,241,0.5)' }}>({formatNumeroSocio(s.numero_socio)})</span>
                     </button>
                   ))}
@@ -202,8 +217,9 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
   );
 }
 
-function NuevoViajeForm({ partidoId, sesion, onCreado, onCancelar }) {
-  const [conductorNombre, setConductorNombre] = useState('');
+function NuevoViajeForm({ partidoId, sesion, misSocios, onCreado, onCancelar }) {
+  const misSociosValidos = (misSocios || []).filter((s) => s.estado_solicitud === 'aprobado');
+  const [socioId, setSocioId] = useState(misSociosValidos[0]?.id || '');
   const [plazas, setPlazas] = useState('');
   const [precio, setPrecio] = useState('');
   const [comentario, setComentario] = useState('');
@@ -213,13 +229,13 @@ function NuevoViajeForm({ partidoId, sesion, onCreado, onCancelar }) {
 
   const handleCrear = async () => {
     setError('');
-    if (!conductorNombre.trim() || !plazas || !telefono.trim()) {
-      setError('Rellena tu nombre, las plazas y el teléfono.');
+    if (!socioId || !plazas || !telefono.trim()) {
+      setError('Elige tu carnet, las plazas y el teléfono.');
       return;
     }
     setGuardando(true);
     const { error: dbError } = await supabase.rpc('crear_viaje_coche', {
-      p_cuenta_id: sesion.id, p_partido_id: partidoId, p_conductor_nombre: conductorNombre.trim(),
+      p_cuenta_id: sesion.id, p_partido_id: partidoId, p_socio_id: socioId,
       p_plazas: parseInt(plazas, 10), p_precio: precio ? parseFloat(precio) : null,
       p_comentario: comentario.trim() || null, p_telefono: telefono.trim(),
     });
@@ -233,9 +249,25 @@ function NuevoViajeForm({ partidoId, sesion, onCreado, onCancelar }) {
       <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 15, color: PALETTE.chalk, marginBottom: 12 }}>
         Ofrecer coche
       </div>
-      <Field label="Tu nombre">
-        <input style={inputStyle} value={conductorNombre} onChange={(e) => setConductorNombre(e.target.value)} placeholder="Cómo te llamas" />
-      </Field>
+
+      {misSociosValidos.length > 1 && (
+        <Field label="Tu carnet">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {misSociosValidos.map((s) => (
+              <button key={s.id} onClick={() => setSocioId(s.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
+                background: socioId === s.id ? 'rgba(201,162,75,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${socioId === s.id ? PALETTE.brass : 'rgba(244,246,241,0.15)'}`,
+                textAlign: 'left', color: PALETTE.chalk, fontSize: 13,
+              }}>
+                <FotoMini foto={s.foto} size={28} />
+                {s.nombre} {s.apellidos}
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
+
       <Field label="Plazas disponibles">
         <input type="number" min="1" style={inputStyle} value={plazas} onChange={(e) => setPlazas(e.target.value)} placeholder="Ej. 3" />
       </Field>
@@ -245,7 +277,7 @@ function NuevoViajeForm({ partidoId, sesion, onCreado, onCancelar }) {
       <Field label="Comentario (opcional)">
         <input style={inputStyle} value={comentario} onChange={(e) => setComentario(e.target.value)} placeholder="Ej. Salgo desde la Plaza del Ayuntamiento" />
       </Field>
-      <Field label="Tu teléfono (solo lo verán quienes pidan plaza para contactarte)">
+      <Field label="Tu teléfono (solo lo verán quienes pidan plaza)">
         <input type="tel" style={inputStyle} value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 600123456" />
       </Field>
       {error && <div style={{ color: '#ff8a8a', fontSize: 13, marginBottom: 10 }}>{error}</div>}
@@ -289,7 +321,7 @@ export function GradaCarPanel({ partidoId, sesion, misSocios, confirm }) {
       )}
 
       {creando ? (
-        <NuevoViajeForm partidoId={partidoId} sesion={sesion} onCreado={() => { setCreando(false); cargar(); }} onCancelar={() => setCreando(false)} />
+        <NuevoViajeForm partidoId={partidoId} sesion={sesion} misSocios={misSocios} onCreado={() => { setCreando(false); cargar(); }} onCancelar={() => setCreando(false)} />
       ) : (
         <Button variant="brass" onClick={() => setCreando(true)} style={{ width: '100%' }}>
           <Plus size={16} /> Ofrecer coche para este partido
