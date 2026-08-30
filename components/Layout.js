@@ -66,22 +66,39 @@ export function useTieneCarnet(sesion) {
   return tiene;
 }
 
+export function usePendientesGradaCar(sesion) {
+  const [pendientes, setPendientes] = useState(0);
+  useEffect(() => {
+    if (!sesion) return;
+    const cargar = () => {
+      supabase.rpc('contar_pendientes_gradacar', { p_cuenta_id: sesion.id }).then(({ data }) => {
+        setPendientes(data || 0);
+      });
+    };
+    cargar();
+    const interval = setInterval(cargar, 20000);
+    return () => clearInterval(interval);
+  }, [sesion?.id]);
+  return pendientes;
+}
+
 export function Layout({ sesion, children }) {
   const router = useRouter();
   const [avisoTemporal, setAvisoTemporal] = useState(false);
   const tieneCarnet = useTieneCarnet(sesion);
+  const pendientesGradaCar = usePendientesGradaCar(sesion);
 
   useEffect(() => {
     setAvisoTemporal(tienePasswordTemporal());
   }, [router.pathname]);
 
   const tabs = [
-    { href: '/inicio', label: 'Inicio', icon: Home, requiereCarnet: false },
-    { href: '/carnets', label: 'Mis carnets', icon: CreditCard, requiereCarnet: false },
-    { href: '/calendario', label: 'Calendario', icon: Calendar, requiereCarnet: true },
-    { href: '/noticias', label: 'Noticias', icon: Newspaper, requiereCarnet: true },
-    { href: '/cuenta', label: 'Cuenta', icon: Lock, requiereCarnet: false },
-    ...(sesion?.is_admin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck, requiereCarnet: false }] : []),
+    { href: '/inicio', label: 'Inicio', icon: Home, requiereCarnet: false, badge: false },
+    { href: '/carnets', label: 'Mis carnets', icon: CreditCard, requiereCarnet: false, badge: false },
+    { href: '/calendario', label: 'Calendario', icon: Calendar, requiereCarnet: true, badge: pendientesGradaCar > 0 },
+    { href: '/noticias', label: 'Noticias', icon: Newspaper, requiereCarnet: true, badge: false },
+    { href: '/cuenta', label: 'Cuenta', icon: Lock, requiereCarnet: false, badge: false },
+    ...(sesion?.is_admin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck, requiereCarnet: false, badge: false }] : []),
   ];
 
   const paginaActualBloqueada = tabs.find((t) => t.href === router.pathname)?.requiereCarnet && tieneCarnet === false;
@@ -163,12 +180,20 @@ export function Layout({ sesion, children }) {
           const bloqueada = t.requiereCarnet && tieneCarnet === false;
           return (
             <Link key={t.href} href={t.href} style={{
-              flex: 1, padding: '10px 4px 8px',
+              flex: 1, padding: '10px 4px 8px', position: 'relative',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
               color: active ? PALETTE.stripeSoft : bloqueada ? 'rgba(244,246,241,0.25)' : 'rgba(244,246,241,0.55)',
               textDecoration: 'none',
             }}>
-              <Icon size={20} />
+              <div style={{ position: 'relative' }}>
+                <Icon size={20} />
+                {t.badge && (
+                  <span style={{
+                    position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: '50%',
+                    background: PALETTE.flare, border: `2px solid ${PALETTE.pitchDark}`,
+                  }} />
+                )}
+              </div>
               <span style={{ fontFamily: fontStack.label, fontSize: 11.5, fontWeight: 700 }}>{t.label}</span>
             </Link>
           );
