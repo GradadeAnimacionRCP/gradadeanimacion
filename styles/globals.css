@@ -23,24 +23,13 @@ img {
   pointer-events: auto;
 }
 
+.gda-aviso-horizontal {
+  display: none;
+}
+
 @media (orientation: landscape) and (max-height: 600px) {
-  #__next {
+  .gda-aviso-horizontal {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-  }
-  #__next::before {
-    content: "Gira el móvil a vertical para usar la app 📱";
-    display: block;
-    color: #F7F5F3;
-    font-family: 'Oswald', sans-serif;
-    font-size: 18px;
-    text-align: center;
-    padding: 40px;
-  }
-  #__next > * {
-    display: none;
   }
 }
 
