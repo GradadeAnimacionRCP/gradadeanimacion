@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { PALETTE, fontStack } from '../styles/tema';
+import { getEscudoRacing } from '../lib/config';
 import { Shield, MapPin, Navigation } from 'lucide-react';
 
 const DIAS_SEMANA = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
@@ -49,8 +51,16 @@ export function PartidoCard(props) {
   var destacado = props.destacado || false;
   var pasado = partidoEsPasado(partido);
   var info = resultadoInfo(partido);
-  var escudoLocal = partido.es_local ? '/escudo.png' : partido.escudo_rival;
-  var escudoVisitante = partido.es_local ? partido.escudo_rival : '/escudo.png';
+
+  const [escudoRacing, setEscudoRacing] = useState(null);
+  useEffect(() => {
+    let cancelado = false;
+    getEscudoRacing().then((v) => { if (!cancelado) setEscudoRacing(v); });
+    return () => { cancelado = true; };
+  }, []);
+
+  var escudoLocal = partido.es_local ? escudoRacing : partido.escudo_rival;
+  var escudoVisitante = partido.es_local ? partido.escudo_rival : escudoRacing;
   var puntosLocal = partido.es_local ? partido.puntos_local : partido.puntos_rival;
   var puntosVisitante = partido.es_local ? partido.puntos_rival : partido.puntos_local;
 
