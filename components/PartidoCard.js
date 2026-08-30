@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PALETTE, fontStack } from '../styles/tema';
 import { getEscudoRacing } from '../lib/config';
-import { Shield, MapPin, Navigation } from 'lucide-react';
+import { Shield, MapPin, Navigation, Home, Plane } from 'lucide-react';
 
 const DIAS_SEMANA = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const MESES_CORTO = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
@@ -28,6 +28,11 @@ function resultadoInfo(partido) {
   if (golesA === golesB) return { color: '#FFD24C', texto: 'Empate' };
   const ganamos = partido.es_local ? golesA > golesB : golesB > golesA;
   return ganamos ? { color: '#4ADE80', texto: 'Victoria' } : { color: '#ff6b6b', texto: 'Derrota' };
+}
+
+export function IconoLocalizacion({ esLocal, size = 15, color }) {
+  const Icono = esLocal ? Home : Plane;
+  return <Icono size={size} color={color || (esLocal ? PALETTE.brass : '#6fa8ff')} strokeWidth={2.2} />;
 }
 
 function Escudo(props) {
@@ -72,10 +77,12 @@ export function PartidoCard(props) {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 8, flexWrap: 'wrap' }}>
         <span style={{
+          display: 'flex', alignItems: 'center', gap: 6,
           fontFamily: fontStack.label, fontWeight: 700, fontSize: 11.5, letterSpacing: 1,
           textTransform: 'uppercase', color: partido.es_local ? PALETTE.brass : '#6fa8ff',
         }}>
-          {partido.es_local ? '🏠 En casa' : '✈️ Fuera'}
+          <IconoLocalizacion esLocal={partido.es_local} size={13} />
+          {partido.es_local ? 'En casa' : 'Fuera'}
         </span>
         {partido.jornada && (
           <span style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.5)', fontFamily: fontStack.label }}>Jornada {partido.jornada}</span>
