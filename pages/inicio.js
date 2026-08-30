@@ -193,10 +193,10 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
   const escudoVisitante = proximoPartido?.es_local ? proximoPartido?.escudo_rival : escudoRacing;
 
   return (
-    <div style={{ padding: '18px 18px 30px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ padding: '18px 18px 30px', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
       <div style={{
-        position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)',
-        width: 380, height: 380, opacity: 0.06, pointerEvents: 'none', zIndex: 0,
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        width: 420, height: 420, opacity: 0.06, pointerEvents: 'none', zIndex: 0,
       }}>
         <img src="/escudo.png" alt="" style={{ width: '100%', height: '100%' }} />
       </div>
