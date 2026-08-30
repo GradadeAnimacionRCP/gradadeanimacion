@@ -7,12 +7,13 @@ import { PartidoCard, partidoEsPasado, formatFechaPartido } from '../components/
 import { Calendar, ChevronDown } from 'lucide-react';
 
 function PartidoResumen({ partido }) {
+  const titulo = partido.es_local ? `vs ${partido.rival}` : `vs ${partido.rival} (fuera)`;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px' }}>
-      <span style={{ fontSize: 15 }}>{partido.es_local ? '🏠' : '✈️'}</span>
+      <span style={{ fontSize: 15, flexShrink: 0 }}>{partido.es_local ? '🏠' : '✈️'}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: fontStack.heading, fontWeight: 600, fontSize: 13.5, color: PALETTE.chalk }}>
-          {partido.es_local ? `vs ${partido.rival}` : `${partido.rival} (fuera)`}
+          {titulo}
         </div>
         <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label }}>
           {formatFechaPartido(partido.fecha, partido.hora)}
