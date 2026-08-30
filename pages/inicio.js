@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { LoadingCrest } from '../components/LoadingCrest';
+import { CuentaAtrasPartido } from '../components/CuentaAtrasPartido';
+import { saludoActual, primerCarnet, fechaInicioSocio, formatAntiguedad } from '../lib/perfil';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field } from '../components/UI';
 import { CropModal } from '../components/CropModal';
-import { UserPlus, Search, Camera, Users } from 'lucide-react';
+import { UserPlus, Search, Camera, Users, Calendar as CalendarIcon, Award } from 'lucide-react';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -32,9 +34,77 @@ function prepararFotoParaRecorte(file) {
   });
 }
 
-export default function Inicio() {
-  const sesion = useSesion();
+function PerfilInicio({ sesion, misSociosAprobados }) {
+  const [proximoPartido, setProximoPartido] = useState(undefined);
 
+  useEffect(() => {
+    supabase.from('partidos').select('*').is('resultado', null)
+      .order('fecha', { ascending: true, nullsFirst: false }).limit(1)
+      .then(({ data }) => setProximoPartido(data && data[0] ? data[0] : null));
+  }, []);
+
+  const carnet = primerCarnet(misSociosAprobados);
+  const nombreMostrar = carnet ? carnet.nombre : sesion.usuario;
+  const antiguedad = carnet ? formatAntiguedad(fechaInicioSocio(carnet)) : '';
+
+  return (
+    <div style={{ padding: '18px 18px 30px' }}>
+      <div style={{ ...authCardStyle, textAlign: 'center', marginBottom: 18 }}>
+        <div style={{
+          width: 74, height: 74, borderRadius: '50%', margin: '0 auto 14px', overflow: 'hidden',
+          border: `2px solid ${PALETTE.brass}`, background: 'rgba(255,255,255,0.06)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {carnet?.foto ? <img src={carnet.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={32} color={PALETTE.chalk} opacity={0.5} />}
+        </div>
+        <div style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>
+          {saludoActual()}
+        </div>
+        <div style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 30, color: PALETTE.chalk, letterSpacing: 1 }}>
+          {nombreMostrar}
+        </div>
+      </div>
+
+      <div style={{ ...authCardStyle, marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
+          <CalendarIcon size={16} color={PALETTE.brass} />
+          <span style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
+            Próximo partido
+          </span>
+        </div>
+        {proximoPartido === undefined ? (
+          <div style={{ textAlign: 'center', color: 'rgba(244,246,241,0.5)', fontSize: 13 }}>Cargando...</div>
+        ) : (
+          <>
+            {proximoPartido && (
+              <div style={{ textAlign: 'center', fontSize: 13.5, color: PALETTE.chalk, marginBottom: 10, fontFamily: fontStack.heading, fontWeight: 600 }}>
+                {proximoPartido.es_local ? `vs ${proximoPartido.rival}` : `${proximoPartido.rival} (fuera)`}
+              </div>
+            )}
+            <CuentaAtrasPartido partido={proximoPartido} />
+          </>
+        )}
+      </div>
+
+      {antiguedad && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(201,162,75,0.15), rgba(200,30,44,0.1))',
+          border: '1px solid rgba(201,162,75,0.35)', borderRadius: 18, padding: '18px 20px', textAlign: 'center',
+        }}>
+          <Award size={22} color={PALETTE.brass} style={{ marginBottom: 8 }} />
+          <div style={{ fontFamily: fontStack.label, fontSize: 11.5, color: 'rgba(244,246,241,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+            Llevas con la grada
+          </div>
+          <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 18, color: PALETTE.chalk }}>
+            {antiguedad}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FormulariosAlta({ sesion }) {
   const [nombre, setNombre] = useState('');
   const [apellidos, setApellidos] = useState('');
   const [foto, setFoto] = useState(null);
@@ -55,15 +125,6 @@ export default function Inicio() {
   useEffect(() => {
     supabase.rpc('contar_socios_aprobados').then(({ data }) => setTotalSocios(data));
   }, []);
-
-  if (sesion === undefined) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <LoadingCrest texto="Cargando..." />
-      </div>
-    );
-  }
-  if (!sesion) return null;
 
   const handleFoto = async (e) => {
     const f = e.target.files?.[0];
@@ -121,98 +182,127 @@ export default function Inicio() {
   };
 
   return (
-    <Layout sesion={sesion}>
-      <div style={{ padding: '8px 18px 40px' }}>
-        {cropSrc && (
-          <CropModal src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={(dataUrl) => { setFoto(dataUrl); setCropSrc(null); }} />
-        )}
+    <div style={{ padding: '8px 18px 40px' }}>
+      {cropSrc && (
+        <CropModal src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={(dataUrl) => { setFoto(dataUrl); setCropSrc(null); }} />
+      )}
 
-        <div style={{ textAlign: 'center', padding: '18px 0 26px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 320, height: 320, opacity: 0.1, pointerEvents: 'none' }}>
-            <img src="/escudo.png" alt="" style={{ width: '100%', height: '100%' }} />
+      <div style={{ textAlign: 'center', padding: '18px 0 26px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 320, height: 320, opacity: 0.1, pointerEvents: 'none' }}>
+          <img src="/escudo.png" alt="" style={{ width: '100%', height: '100%' }} />
+        </div>
+        <div style={{ position: 'relative' }}>
+          <h1 style={{
+            fontFamily: fontStack.display, fontWeight: 400, fontSize: 44, margin: 0, letterSpacing: 3, lineHeight: 1,
+            background: `linear-gradient(180deg, ${PALETTE.chalk} 35%, ${PALETTE.brass} 130%)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.45))',
+          }}>GRADA DE ANIMACIÓN</h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8 }}>
+            <span style={{ width: 26, height: 1, background: 'rgba(201,162,75,0.5)' }} />
+            <div style={{ fontFamily: fontStack.label, color: PALETTE.brass, letterSpacing: 3.5, fontSize: 13, textTransform: 'uppercase', fontWeight: 700 }}>Racing Club Portuense</div>
+            <span style={{ width: 26, height: 1, background: 'rgba(201,162,75,0.5)' }} />
           </div>
-          <div style={{ position: 'relative' }}>
-            <h1 style={{
-              fontFamily: fontStack.display, fontWeight: 400, fontSize: 44, margin: 0, letterSpacing: 3, lineHeight: 1,
-              background: `linear-gradient(180deg, ${PALETTE.chalk} 35%, ${PALETTE.brass} 130%)`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.45))',
-            }}>GRADA DE ANIMACIÓN</h1>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8 }}>
-              <span style={{ width: 26, height: 1, background: 'rgba(201,162,75,0.5)' }} />
-              <div style={{ fontFamily: fontStack.label, color: PALETTE.brass, letterSpacing: 3.5, fontSize: 13, textTransform: 'uppercase', fontWeight: 700 }}>Racing Club Portuense</div>
-              <span style={{ width: 26, height: 1, background: 'rgba(201,162,75,0.5)' }} />
+          <p style={{ color: 'rgba(244,246,241,0.72)', fontSize: 14.5, marginTop: 14, lineHeight: 1.5 }}>
+            Hazte socio de la grada y consigue tu carnet digital al instante.
+          </p>
+          {totalSocios !== null && totalSocios > 0 && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14,
+              background: 'rgba(201,162,75,0.12)', border: '1px solid rgba(201,162,75,0.35)', borderRadius: 999,
+              padding: '5px 14px', fontFamily: fontStack.label, fontSize: 13, fontWeight: 700, color: PALETTE.brass,
+            }}>
+              <Users size={14} /> Ya somos {totalSocios} {totalSocios === 1 ? 'socio' : 'socios'}
             </div>
-            <p style={{ color: 'rgba(244,246,241,0.72)', fontSize: 14.5, marginTop: 14, lineHeight: 1.5 }}>
-              Hazte socio de la grada y consigue tu carnet digital al instante.
-            </p>
-            {totalSocios !== null && totalSocios > 0 && (
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14,
-                background: 'rgba(201,162,75,0.12)', border: '1px solid rgba(201,162,75,0.35)', borderRadius: 999,
-                padding: '5px 14px', fontFamily: fontStack.label, fontSize: 13, fontWeight: 700, color: PALETTE.brass,
-              }}>
-                <Users size={14} /> Ya somos {totalSocios} {totalSocios === 1 ? 'socio' : 'socios'}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div style={{ ...authCardStyle, marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <UserPlus size={18} color={PALETTE.stripeSoft} />
-            <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Nuevo socio</h2>
-          </div>
-          <form onSubmit={handleSubmit}>
-            <Field label="Nombre">
-              <input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} />
-            </Field>
-            <Field label="Apellidos">
-              <input style={inputStyle} value={apellidos} onChange={(e) => setApellidos(e.target.value)} />
-            </Field>
-            <Field label="Fotografía (opcional)">
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleFoto}
-                style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div onClick={() => fileRef.current?.click()} style={{
-                  width: 60, height: 60, borderRadius: 12, border: `2px dashed ${PALETTE.brass}`, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'rgba(255,255,255,0.05)',
-                }}>
-                  {foto ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={22} color={PALETTE.brass} />}
-                </div>
-                <Button type="button" variant="ghost" onClick={() => fileRef.current?.click()} style={{ fontSize: 13 }}>
-                  {foto ? 'Cambiar' : 'Subir foto'}
-                </Button>
-              </div>
-            </Field>
-            {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{error}</div>}
-            {ok && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{ok}</div>}
-            <Button type="submit" variant="primary" disabled={cargando} style={{ width: '100%' }}>
-              {cargando ? 'Generando...' : 'Generar mi carnet'}
-            </Button>
-          </form>
-        </div>
-
-        <div style={authCardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <Search size={18} color={PALETTE.brass} />
-            <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Añadir un carnet</h2>
-          </div>
-          <form onSubmit={handleBuscar}>
-            <Field label="Número de socio">
-              <input style={inputStyle} value={busId} onChange={(e) => setBusId(e.target.value)} placeholder="GDA-0001" />
-            </Field>
-            <Field label="Apellidos">
-              <input style={inputStyle} value={busApellido} onChange={(e) => setBusApellido(e.target.value)} />
-            </Field>
-            {busError && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{busError}</div>}
-            {busInfo && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{busInfo}</div>}
-            <Button type="submit" variant="brass" disabled={busCargando} style={{ width: '100%' }}>
-              {busCargando ? 'Buscando...' : 'Añadir carnet a mi cuenta'}
-            </Button>
-          </form>
+          )}
         </div>
       </div>
+
+      <div style={{ ...authCardStyle, marginBottom: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <UserPlus size={18} color={PALETTE.stripeSoft} />
+          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Nuevo socio</h2>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <Field label="Nombre">
+            <input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </Field>
+          <Field label="Apellidos">
+            <input style={inputStyle} value={apellidos} onChange={(e) => setApellidos(e.target.value)} />
+          </Field>
+          <Field label="Fotografía (opcional)">
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFoto}
+              style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div onClick={() => fileRef.current?.click()} style={{
+                width: 60, height: 60, borderRadius: 12, border: `2px dashed ${PALETTE.brass}`, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'rgba(255,255,255,0.05)',
+              }}>
+                {foto ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={22} color={PALETTE.brass} />}
+              </div>
+              <Button type="button" variant="ghost" onClick={() => fileRef.current?.click()} style={{ fontSize: 13 }}>
+                {foto ? 'Cambiar' : 'Subir foto'}
+              </Button>
+            </div>
+          </Field>
+          {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{error}</div>}
+          {ok && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{ok}</div>}
+          <Button type="submit" variant="primary" disabled={cargando} style={{ width: '100%' }}>
+            {cargando ? 'Generando...' : 'Generar mi carnet'}
+          </Button>
+        </form>
+      </div>
+
+      <div style={authCardStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Search size={18} color={PALETTE.brass} />
+          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Añadir un carnet</h2>
+        </div>
+        <form onSubmit={handleBuscar}>
+          <Field label="Número de socio">
+            <input style={inputStyle} value={busId} onChange={(e) => setBusId(e.target.value)} placeholder="GDA-0001" />
+          </Field>
+          <Field label="Apellidos">
+            <input style={inputStyle} value={busApellido} onChange={(e) => setBusApellido(e.target.value)} />
+          </Field>
+          {busError && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{busError}</div>}
+          {busInfo && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{busInfo}</div>}
+          <Button type="submit" variant="brass" disabled={busCargando} style={{ width: '100%' }}>
+            {busCargando ? 'Buscando...' : 'Añadir carnet a mi cuenta'}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function Inicio() {
+  const sesion = useSesion();
+  const [misSocios, setMisSocios] = useState(undefined);
+
+  useEffect(() => {
+    if (!sesion) return;
+    supabase.rpc('mis_socios', { p_cuenta_id: sesion.id }).then(({ data }) => setMisSocios(data || []));
+  }, [sesion]);
+
+  if (sesion === undefined || misSocios === undefined) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingCrest texto="Cargando..." />
+      </div>
+    );
+  }
+  if (!sesion) return null;
+
+  const misSociosAprobados = misSocios.filter((s) => s.estado_solicitud === 'aprobado');
+
+  return (
+    <Layout sesion={sesion}>
+      {misSociosAprobados.length === 0 ? (
+        <FormulariosAlta sesion={sesion} />
+      ) : (
+        <PerfilInicio sesion={sesion} misSociosAprobados={misSociosAprobados} />
+      )}
     </Layout>
   );
 }
