@@ -6,6 +6,11 @@ html, body {
   padding: 0;
   background: #160305;
   overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+* {
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes gda-spin {
