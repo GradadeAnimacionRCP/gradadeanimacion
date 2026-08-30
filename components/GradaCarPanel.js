@@ -3,10 +3,22 @@ import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { formatNumeroSocio } from '../lib/socios';
-import { Car, Users, Plus, Trash2, Check, X, MessageCircle } from 'lucide-react';
+import { Car, Users, Plus, Trash2, Check, X, MessageCircle, CheckCircle2 } from 'lucide-react';
 
 function limpiarTelefono(t) {
   return t.replace(/[^\d+]/g, '');
+}
+
+async function enviarPushCoche({ cuentaId, title, body }) {
+  try {
+    await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cuentaId, title, body, url: '/calendario' }),
+    });
+  } catch (err) {
+    console.error('No se pudo enviar el aviso:', err);
+  }
 }
 
 function FotoMini({ foto, size = 40 }) {
@@ -28,6 +40,7 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
   const [procesando, setProcesando] = useState(false);
   const [seleccionando, setSeleccionando] = useState(false);
   const [seleccion, setSeleccion] = useState(new Set());
+  const [justoSolicitado, setJustoSolicitado] = useState(false);
 
   const completo = viaje.plazas_ocupadas >= viaje.plazas_totales;
   const plazasLibres = viaje.plazas_totales - viaje.plazas_ocupadas;
@@ -39,16 +52,29 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
 
   useEffect(() => { cargarMisSolicitudes(); }, [cargarMisSolicitudes]);
 
-  const cargarSolicitantes = async () => {
+  const cargarSolicitantes = useCallback(async () => {
     const { data } = await supabase.rpc('listar_solicitudes_de_viaje', { p_cuenta_id: sesion.id, p_viaje_id: viaje.id });
     setSolicitantes(data || []);
+  }, [sesion.id, viaje.id]);
+
+  const handleAbrirSolicitantes = () => {
+    const nuevoEstado = !expandido;
+    setExpandido(nuevoEstado);
+    if (nuevoEstado) cargarSolicitantes();
   };
 
-  const handleResponder = async (solicitudId, aceptar) => {
+  const handleResponder = async (solicitud, aceptar) => {
     setProcesando(true);
-    const { error } = await supabase.rpc('responder_solicitud', { p_cuenta_id: sesion.id, p_solicitud_id: solicitudId, p_aceptar: aceptar });
+    const { error } = await supabase.rpc('responder_solicitud', { p_cuenta_id: sesion.id, p_solicitud_id: solicitud.id, p_aceptar: aceptar });
     setProcesando(false);
     if (error) { alert(error.message); return; }
+    if (aceptar) {
+      enviarPushCoche({
+        cuentaId: solicitud.cuenta_id,
+        title: '✅ ¡Plaza confirmada!',
+        body: `El conductor ha confirmado tu plaza para el próximo partido.`,
+      });
+    }
     cargarSolicitantes();
     onCambio();
   };
@@ -70,6 +96,7 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
     setProcesando(true);
     await supabase.rpc('cancelar_solicitud', { p_cuenta_id: sesion.id, p_solicitud_id: solicitudId });
     setProcesando(false);
+    setJustoSolicitado(false);
     cargarMisSolicitudes();
     onCambio();
   };
@@ -80,6 +107,7 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
 
   const abrirSeleccion = () => {
     setSeleccion(new Set());
+    setJustoSolicitado(false);
     setSeleccionando(true);
   };
 
@@ -95,13 +123,23 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
   const handleConfirmarSolicitud = async () => {
     if (seleccion.size === 0) return;
     setProcesando(true);
+    const nombres = [];
     for (const socioId of seleccion) {
       await supabase.rpc('solicitar_plaza', { p_cuenta_id: sesion.id, p_socio_id: socioId, p_viaje_id: viaje.id });
+      const socio = misSociosValidos.find((s) => s.id === socioId);
+      if (socio) nombres.push(`${socio.nombre} ${socio.apellidos}`);
     }
     setProcesando(false);
     setSeleccionando(false);
+    setJustoSolicitado(true);
     cargarMisSolicitudes();
     onCambio();
+
+    enviarPushCoche({
+      cuentaId: viaje.cuenta_id,
+      title: '🚗 Nueva petición de plaza',
+      body: `${nombres.join(', ')} ${nombres.length === 1 ? 'quiere' : 'quieren'} ir en tu coche al próximo partido.`,
+    });
   };
 
   return (
@@ -143,42 +181,59 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
 
       {esMio ? (
         <div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: solicitantes ? 10 : 0 }}>
-            <Button variant="ghost" onClick={() => { setExpandido((v) => !v); if (!solicitantes) cargarSolicitantes(); }} style={{ flex: 1, fontSize: 12.5 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: expandido ? 10 : 0 }}>
+            <Button variant="ghost" onClick={handleAbrirSolicitantes} style={{ flex: 1, fontSize: 12.5 }}>
               Ver solicitudes
             </Button>
             <Button variant="danger" onClick={handleEliminarViaje} style={{ fontSize: 12.5 }}>
               <Trash2 size={14} />
             </Button>
           </div>
-          {expandido && solicitantes && (
+          {expandido && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {solicitantes.length === 0 && <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center' }}>Nadie ha pedido plaza todavía.</p>}
-              {solicitantes.map((s) => (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px' }}>
-                  <FotoMini foto={s.foto} size={32} />
-                  <span style={{ flex: 1, fontSize: 13, color: PALETTE.chalk }}>{s.nombre} {s.apellidos}</span>
-                  {s.estado === 'pendiente' ? (
-                    <>
-                      <button onClick={() => handleResponder(s.id, true)} disabled={procesando} style={{ background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)', borderRadius: 8, width: 30, height: 30, color: '#4ADE80', cursor: 'pointer' }}>
-                        <Check size={14} style={{ margin: '0 auto' }} />
-                      </button>
-                      <button onClick={() => handleResponder(s.id, false)} disabled={procesando} style={{ background: 'rgba(200,30,44,0.15)', border: '1px solid rgba(200,30,44,0.4)', borderRadius: 8, width: 30, height: 30, color: '#ff8a8a', cursor: 'pointer' }}>
-                        <X size={14} style={{ margin: '0 auto' }} />
-                      </button>
-                    </>
-                  ) : (
-                    <span style={{ fontSize: 11.5, fontWeight: 700, fontFamily: fontStack.label, color: s.estado === 'aceptado' ? '#4ADE80' : '#ff8a8a', textTransform: 'uppercase' }}>
-                      {s.estado === 'aceptado' ? 'Aceptado' : 'Rechazado'}
-                    </span>
-                  )}
-                </div>
-              ))}
+              {solicitantes === null ? (
+                <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center' }}>Cargando...</p>
+              ) : solicitantes.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.5)', textAlign: 'center' }}>Nadie ha pedido plaza todavía.</p>
+              ) : (
+                solicitantes.map((s) => (
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px' }}>
+                    <FotoMini foto={s.foto} size={32} />
+                    <span style={{ flex: 1, fontSize: 13, color: PALETTE.chalk }}>{s.nombre} {s.apellidos}</span>
+                    {s.estado === 'pendiente' ? (
+                      <>
+                        <button onClick={() => handleResponder(s, true)} disabled={procesando} style={{ background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.4)', borderRadius: 8, width: 30, height: 30, color: '#4ADE80', cursor: 'pointer' }}>
+                          <Check size={14} style={{ margin: '0 auto' }} />
+                        </button>
+                        <button onClick={() => handleResponder(s, false)} disabled={procesando} style={{ background: 'rgba(200,30,44,0.15)', border: '1px solid rgba(200,30,44,0.4)', borderRadius: 8, width: 30, height: 30, color: '#ff8a8a', cursor: 'pointer' }}>
+                          <X size={14} style={{ margin: '0 auto' }} />
+                        </button>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 11.5, fontWeight: 700, fontFamily: fontStack.label, color: s.estado === 'aceptado' ? '#4ADE80' : '#ff8a8a', textTransform: 'uppercase' }}>
+                        {s.estado === 'aceptado' ? 'Aceptado' : 'Rechazado'}
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
       ) : (
         <div>
+          {justoSolicitado && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 8, background: 'rgba(74,222,128,0.1)',
+              border: '1px solid rgba(74,222,128,0.35)', borderRadius: 10, padding: '10px 12px', marginBottom: 10,
+            }}>
+              <CheckCircle2 size={16} color="#4ADE80" style={{ marginTop: 1, flexShrink: 0 }} />
+              <div style={{ color: '#4ADE80', fontFamily: fontStack.label, fontWeight: 700, fontSize: 12.5 }}>
+                Solicitud enviada. El conductor la confirmará en breve.
+              </div>
+            </div>
+          )}
+
           {misSolicitudes.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
               {misSolicitudes.map((s) => {
@@ -285,6 +340,12 @@ function NuevoViajeForm({ partidoId, sesion, misSocios, onCreado, onCancelar }) 
     });
     setGuardando(false);
     if (dbError) { setError(dbError.message); return; }
+
+    enviarPushCoche({
+      title: '🚗 Nuevo coche disponible',
+      body: 'Alguien ha ofrecido coche compartido para el próximo partido. Échale un vistazo en GradaCar.',
+    });
+
     onCreado();
   };
 
@@ -321,7 +382,7 @@ function NuevoViajeForm({ partidoId, sesion, misSocios, onCreado, onCancelar }) 
       <Field label="Comentario (opcional)">
         <input style={inputStyle} value={comentario} onChange={(e) => setComentario(e.target.value)} placeholder="Ej. Salgo desde la Plaza del Ayuntamiento" />
       </Field>
-      <Field label="Tu teléfono (solo lo verán quienes pidan plaza)">
+      <Field label="Tu teléfono de WhatsApp (solo lo verán quienes pidan plaza)">
         <input type="tel" style={inputStyle} value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 600123456" />
       </Field>
       {error && <div style={{ color: '#ff8a8a', fontSize: 13, marginBottom: 10 }}>{error}</div>}
