@@ -26,7 +26,8 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
   const [misSolicitudes, setMisSolicitudes] = useState([]);
   const [solicitantes, setSolicitantes] = useState(null);
   const [procesando, setProcesando] = useState(false);
-  const [socioParaPedir, setSocioParaPedir] = useState(null);
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [seleccion, setSeleccion] = useState(new Set());
 
   const completo = viaje.plazas_ocupadas >= viaje.plazas_totales;
   const plazasLibres = viaje.plazas_totales - viaje.plazas_ocupadas;
@@ -41,24 +42,6 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
   const cargarSolicitantes = async () => {
     const { data } = await supabase.rpc('listar_solicitudes_de_viaje', { p_cuenta_id: sesion.id, p_viaje_id: viaje.id });
     setSolicitantes(data || []);
-  };
-
-  const handlePedirPlaza = async (socioId) => {
-    setProcesando(true);
-    await supabase.rpc('solicitar_plaza', { p_cuenta_id: sesion.id, p_socio_id: socioId, p_viaje_id: viaje.id });
-    setProcesando(false);
-    setSocioParaPedir(null);
-    cargarMisSolicitudes();
-    onCambio();
-  };
-
-  const handleCancelar = async (solicitudId) => {
-    if (!(await confirm('¿Cancelar tu solicitud de plaza?'))) return;
-    setProcesando(true);
-    await supabase.rpc('cancelar_solicitud', { p_cuenta_id: sesion.id, p_solicitud_id: solicitudId });
-    setProcesando(false);
-    cargarMisSolicitudes();
-    onCambio();
   };
 
   const handleResponder = async (solicitudId, aceptar) => {
@@ -82,9 +65,44 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
     window.open(`https://wa.me/${limpiarTelefono(telefono)}`, '_blank');
   };
 
+  const handleCancelar = async (solicitudId) => {
+    if (!(await confirm('¿Cancelar tu solicitud de plaza?'))) return;
+    setProcesando(true);
+    await supabase.rpc('cancelar_solicitud', { p_cuenta_id: sesion.id, p_solicitud_id: solicitudId });
+    setProcesando(false);
+    cargarMisSolicitudes();
+    onCambio();
+  };
+
   const misSociosValidos = (misSocios || []).filter((s) => s.estado_solicitud === 'aprobado');
   const idsYaSolicitados = new Set(misSolicitudes.map((s) => s.socio_id));
   const misSociosDisponibles = misSociosValidos.filter((s) => !idsYaSolicitados.has(s.id));
+
+  const abrirSeleccion = () => {
+    setSeleccion(new Set());
+    setSeleccionando(true);
+  };
+
+  const toggleCheckbox = (socioId) => {
+    setSeleccion((prev) => {
+      const nuevo = new Set(prev);
+      if (nuevo.has(socioId)) nuevo.delete(socioId);
+      else nuevo.add(socioId);
+      return nuevo;
+    });
+  };
+
+  const handleConfirmarSolicitud = async () => {
+    if (seleccion.size === 0) return;
+    setProcesando(true);
+    for (const socioId of seleccion) {
+      await supabase.rpc('solicitar_plaza', { p_cuenta_id: sesion.id, p_socio_id: socioId, p_viaje_id: viaje.id });
+    }
+    setProcesando(false);
+    setSeleccionando(false);
+    cargarMisSolicitudes();
+    onCambio();
+  };
 
   return (
     <div style={{
@@ -184,25 +202,51 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
           )}
 
           {!completo && misSociosDisponibles.length > 0 && (
-            socioParaPedir === null ? (
-              <Button variant="brass" onClick={() => setSocioParaPedir('elegir')} style={{ width: '100%', fontSize: 13, marginBottom: 8 }}>
+            !seleccionando ? (
+              <Button variant="brass" onClick={abrirSeleccion} style={{ width: '100%', fontSize: 13, marginBottom: 8 }}>
                 <Users size={14} /> Pedir plaza
               </Button>
             ) : (
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.5)', fontFamily: fontStack.label, marginBottom: 6 }}>¿Con cuál de tus carnets?</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {misSociosDisponibles.map((s) => (
-                    <button key={s.id} onClick={() => handlePedirPlaza(s.id)} disabled={procesando} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 10,
-                      padding: '9px 12px', textAlign: 'left', color: PALETTE.chalk, fontSize: 13, cursor: 'pointer',
-                    }}>
-                      <FotoMini foto={s.foto} size={28} />
-                      {s.nombre} {s.apellidos} <span style={{ color: 'rgba(244,246,241,0.5)' }}>({formatNumeroSocio(s.numero_socio)})</span>
-                    </button>
-                  ))}
-                  <Button variant="ghost" onClick={() => setSocioParaPedir(null)} style={{ fontSize: 12.5 }}>Cancelar</Button>
+              <div style={{ marginBottom: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12 }}>
+                <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.5)', fontFamily: fontStack.label, marginBottom: 8 }}>
+                  Marca los carnets con los que quieres ir (máx. {plazasLibres} plaza{plazasLibres === 1 ? '' : 's'} libre{plazasLibres === 1 ? '' : 's'})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                  {misSociosDisponibles.map((s) => {
+                    const marcado = seleccion.has(s.id);
+                    const alcanzoLimite = seleccion.size >= plazasLibres && !marcado;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => !alcanzoLimite && toggleCheckbox(s.id)}
+                        disabled={alcanzoLimite}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10,
+                          cursor: alcanzoLimite ? 'not-allowed' : 'pointer', textAlign: 'left', width: '100%',
+                          background: marcado ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${marcado ? 'rgba(74,222,128,0.4)' : 'rgba(244,246,241,0.15)'}`,
+                          opacity: alcanzoLimite ? 0.4 : 1,
+                        }}
+                      >
+                        <div style={{
+                          width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: marcado ? '#4ADE80' : 'transparent', border: marcado ? 'none' : '1.5px solid rgba(244,246,241,0.35)',
+                        }}>
+                          {marcado && <Check size={13} color={PALETTE.ink} strokeWidth={3} />}
+                        </div>
+                        <FotoMini foto={s.foto} size={28} />
+                        <span style={{ fontSize: 13, color: PALETTE.chalk }}>
+                          {s.nombre} {s.apellidos} <span style={{ color: 'rgba(244,246,241,0.5)' }}>({formatNumeroSocio(s.numero_socio)})</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button variant="ghost" disabled={procesando} onClick={() => setSeleccionando(false)} style={{ flex: 1, fontSize: 12.5 }}>Cancelar</Button>
+                  <Button variant="primary" disabled={procesando || seleccion.size === 0} onClick={handleConfirmarSolicitud} style={{ flex: 1, fontSize: 12.5 }}>
+                    {procesando ? 'Enviando...' : `Pedir ${seleccion.size || ''} plaza${seleccion.size === 1 ? '' : 's'}`}
+                  </Button>
                 </div>
               </div>
             )
