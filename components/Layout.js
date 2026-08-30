@@ -64,6 +64,7 @@ export function Layout({ sesion, children }) {
       minHeight: '100vh',
       background: `radial-gradient(circle at 50% -10%, ${PALETTE.pitch} 0%, ${PALETTE.ink} 65%)`,
       display: 'flex', flexDirection: 'column',
+      paddingTop: 'env(safe-area-inset-top, 0px)',
     }}>
       {avisoTemporal && (
         <div style={{
