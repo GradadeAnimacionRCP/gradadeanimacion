@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { LoadingCrest } from '../components/LoadingCrest';
+import { AsistenciaPartido } from '../components/AsistenciaPartido';
 import { PALETTE, fontStack } from '../styles/tema';
 import { PartidoCard, partidoEsPasado, formatFechaPartido, IconoLocalizacion } from '../components/PartidoCard';
 import { Calendar, ChevronDown } from 'lucide-react';
@@ -31,6 +32,7 @@ function PartidoResumen({ partido }) {
 export default function CalendarioPage() {
   const sesion = useSesion();
   const [partidos, setPartidos] = useState(undefined);
+  const [misSocios, setMisSocios] = useState([]);
   const [expandido, setExpandido] = useState(null);
   const [verJugados, setVerJugados] = useState(false);
 
@@ -44,6 +46,11 @@ export default function CalendarioPage() {
     const interval = setInterval(cargar, 15000);
     return () => clearInterval(interval);
   }, [cargar]);
+
+  useEffect(() => {
+    if (!sesion) return;
+    supabase.rpc('mis_socios', { p_cuenta_id: sesion.id }).then(({ data }) => setMisSocios(data || []));
+  }, [sesion]);
 
   if (sesion === undefined) {
     return (
@@ -82,6 +89,7 @@ export default function CalendarioPage() {
             </div>
             <div style={{ marginBottom: 22 }}>
               <PartidoCard partido={siguiente} destacado />
+              <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} />
             </div>
 
             {resto.length > 0 && (
@@ -102,6 +110,7 @@ export default function CalendarioPage() {
                       {expandido === p.id && (
                         <div style={{ padding: '0 10px 12px' }}>
                           <PartidoCard partido={p} />
+                          <AsistenciaPartido partidoId={p.id} cuentaId={sesion.id} misSocios={misSocios} />
                         </div>
                       )}
                     </div>
