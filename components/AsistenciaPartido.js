@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack } from '../styles/tema';
 import { Button } from './UI';
 import { formatNumeroSocio } from '../lib/socios';
-import { Users, ChevronDown, Check, UserPlus, Trash2 } from 'lucide-react';
+import { Users, ChevronDown, Check, UserPlus, Trash2, CheckCircle2 } from 'lucide-react';
 
 export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
   const [asistentes, setAsistentes] = useState(undefined);
@@ -11,6 +11,7 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
   const [modo, setModo] = useState('resumen'); // 'resumen' | 'seleccionando'
   const [seleccion, setSeleccion] = useState(new Set());
   const [guardando, setGuardando] = useState(false);
+  const [justoConfirmado, setJustoConfirmado] = useState(false);
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.rpc('listar_asistentes', { p_partido_id: partidoId });
@@ -27,6 +28,7 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
 
   const abrirSeleccion = () => {
     setSeleccion(new Set(idsAsistiendo));
+    setJustoConfirmado(false);
     setModo('seleccionando');
   };
 
@@ -52,6 +54,7 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
     }
     setGuardando(false);
     setModo('resumen');
+    setJustoConfirmado(seleccion.size > 0);
     cargar();
   };
 
@@ -62,6 +65,7 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
       await supabase.rpc('toggle_asistencia', { p_cuenta_id: cuentaId, p_socio_id: socioId, p_partido_id: partidoId });
     }
     setGuardando(false);
+    setJustoConfirmado(false);
     cargar();
   };
 
@@ -69,17 +73,17 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
     <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 14, padding: 14, marginTop: 12 }}>
       <button onClick={() => setVerLista((v) => !v)} style={{
         width: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex',
-        alignItems: 'center', justifyContent: 'space-between', padding: 0, marginBottom: modo === 'resumen' ? 12 : 0,
+        alignItems: 'center', justifyContent: 'space-between', padding: 0, marginBottom: 12,
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: fontStack.label, fontWeight: 700, fontSize: 13, color: PALETTE.brass }}>
           <Users size={15} />
-          {asistentes === undefined ? 'Cargando...' : `${asistentes.length} ${asistentes.length === 1 ? 'socio va' : 'socios van'}`}
+          {asistentes === undefined ? 'Cargando...' : `${asistentes.length} ${asistentes.length === 1 ? 'socio va' : 'socios van'} al próximo partido`}
         </span>
         <ChevronDown size={16} color="rgba(244,246,241,0.5)" style={{ transform: verLista ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
       </button>
 
       {verLista && asistentes && asistentes.length > 0 && (
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(244,246,241,0.08)', display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+        <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid rgba(244,246,241,0.08)', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {asistentes.map((a) => (
             <div key={a.socio_id} style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.75)', fontFamily: fontStack.body }}>
               {a.nombre} {a.apellidos}
@@ -95,9 +99,22 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
           </Button>
         ) : (
           <div>
-            <div style={{ fontSize: 12.5, color: '#4ADE80', fontFamily: fontStack.label, fontWeight: 700, marginBottom: 8 }}>
-              ✓ Apuntado: {misAsistentes.map((s) => `${s.nombre} ${s.apellidos}`).join(', ')}
-            </div>
+            {justoConfirmado && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, background: 'rgba(74,222,128,0.1)',
+                border: '1px solid rgba(74,222,128,0.35)', borderRadius: 10, padding: '10px 12px', marginBottom: 10,
+              }}>
+                <CheckCircle2 size={16} color="#4ADE80" style={{ marginTop: 1, flexShrink: 0 }} />
+                <div>
+                  <div style={{ color: '#4ADE80', fontFamily: fontStack.label, fontWeight: 700, fontSize: 12.5 }}>
+                    ¡Asistencia confirmada!
+                  </div>
+                  <div style={{ color: 'rgba(244,246,241,0.7)', fontSize: 12, marginTop: 2, fontFamily: fontStack.body }}>
+                    Apuntado: {misAsistentes.map((s) => `${s.nombre} ${s.apellidos}`).join(', ')}
+                  </div>
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
               <Button variant="ghost" onClick={abrirSeleccion} style={{ flex: 1, fontSize: 13 }}>Editar</Button>
               <Button variant="danger" disabled={guardando} onClick={handleEliminarTodo} style={{ flex: 1, fontSize: 13 }}>
@@ -109,7 +126,7 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
       )}
 
       {modo === 'seleccionando' && (
-        <div style={{ paddingTop: modo === 'seleccionando' && verLista ? 12 : 0, borderTop: verLista ? '1px solid rgba(244,246,241,0.08)' : 'none' }}>
+        <div>
           <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.5)', fontFamily: fontStack.label, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, marginBottom: 8 }}>
             ¿Quién de tus carnets va?
           </div>
@@ -143,7 +160,7 @@ export function AsistenciaPartido({ partidoId, cuentaId, misSocios, confirm }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <Button variant="ghost" disabled={guardando} onClick={() => setModo('resumen')} style={{ flex: 1 }}>Cancelar</Button>
             <Button variant="primary" disabled={guardando} onClick={handleGuardar} style={{ flex: 1 }}>
-              {guardando ? 'Guardando...' : 'Aceptar'}
+              {guardando ? 'Guardando...' : 'Confirmar asistencia'}
             </Button>
           </div>
         </div>
