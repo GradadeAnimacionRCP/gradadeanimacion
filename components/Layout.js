@@ -56,7 +56,7 @@ export function useSesion() {
 }
 
 export function useTieneCarnet(sesion) {
-  const [tiene, setTiene] = useState(null); // null = comprobando, true/false = ya se sabe
+  const [tiene, setTiene] = useState(null);
   useEffect(() => {
     if (!sesion) return;
     supabase.rpc('mis_socios', { p_cuenta_id: sesion.id }).then(({ data }) => {
@@ -86,6 +86,15 @@ export function Layout({ sesion, children }) {
 
   const paginaActualBloqueada = tabs.find((t) => t.href === router.pathname)?.requiereCarnet && tieneCarnet === false;
 
+  useEffect(() => {
+    if (paginaActualBloqueada) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [paginaActualBloqueada]);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -102,12 +111,15 @@ export function Layout({ sesion, children }) {
           <AlertTriangle size={15} /> Estás usando una contraseña temporal. Cámbiala en "Cuenta" cuanto antes.
         </div>
       )}
-      <div style={{ flex: 1, paddingBottom: 70, position: 'relative' }}>
-        {children}
+      <div style={{ flex: 1, paddingBottom: 70, position: 'relative', overflow: paginaActualBloqueada ? 'hidden' : 'visible' }}>
+        <div style={{ height: paginaActualBloqueada ? '100vh' : 'auto', overflow: paginaActualBloqueada ? 'hidden' : 'visible' }}>
+          {children}
+        </div>
         {paginaActualBloqueada && (
           <div style={{
-            position: 'absolute', inset: 0, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-            background: 'rgba(10,10,10,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 70,
+            backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+            background: 'rgba(10,10,10,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center',
             justifyContent: 'center', gap: 14, padding: 30, textAlign: 'center', zIndex: 20,
           }}>
             <LockIcon size={32} color={PALETTE.brass} />
@@ -132,7 +144,7 @@ export function Layout({ sesion, children }) {
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex',
         background: 'rgba(7,40,28,0.92)', backdropFilter: 'blur(10px)',
-        borderTop: '1px solid rgba(201,162,75,0.25)', paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+        borderTop: '1px solid rgba(201,162,75,0.25)', paddingBottom: 'env(safe-area-inset-bottom, 8px)', zIndex: 30,
       }}>
         {tabs.map((t) => {
           const Icon = t.icon;
