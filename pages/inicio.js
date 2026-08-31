@@ -14,6 +14,14 @@ import Link from 'next/link';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
+function avisarAdmins({ title, body, url }) {
+  fetch('/api/send-push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ soloAdmins: true, title, body, url: url || '/admin' }),
+  }).catch(() => {});
+}
+
 function prepararFotoParaRecorte(file) {
   const MAX_LADO = 1600;
   return new Promise((resolve, reject) => {
@@ -337,6 +345,10 @@ function FormulariosAlta({ sesion }) {
     setCargando(false);
     if (error) { setError(error.message); return; }
     setOk(`¡Carnet ${data.id} creado! Está pendiente de que un admin lo valide. Lo verás en "Mis carnets".`);
+    avisarAdmins({
+      title: '🆕 Nueva solicitud de alta',
+      body: `${nombre.trim()} ${apellidos.trim()} quiere darse de alta como socio (${data.id}).`,
+    });
     setNombre(''); setApellidos(''); setFoto(null);
   };
 
@@ -363,6 +375,10 @@ function FormulariosAlta({ sesion }) {
     }
     await supabase.rpc('solicitar_traspaso', { p_cuenta_destino: sesion.id, p_id: carnet.id });
     setBusCargando(false);
+    avisarAdmins({
+      title: '🔁 Solicitud de traspaso',
+      body: `Alguien ha solicitado el carnet ${formatNumeroSocio(carnet.numero_socio)} de otra cuenta.`,
+    });
     setBusInfo('Este carnet pertenece a otra cuenta. Se ha enviado una solicitud de traspaso a un admin; te avisaremos cuando la confirme.');
     setBusId(''); setBusApellido('');
   };
