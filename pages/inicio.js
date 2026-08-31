@@ -169,6 +169,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
   const [jugados, setJugados] = useState(undefined);
   const [ultimaNoticia, setUltimaNoticia] = useState(undefined);
   const [escudoRacing, setEscudoRacing] = useState(null);
+  const [totalSocios, setTotalSocios] = useState(null);
 
   useEffect(() => {
     supabase.from('partidos').select('*').is('resultado', null)
@@ -183,6 +184,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
       .then(({ data }) => setUltimaNoticia(data && data[0] ? data[0] : null));
 
     getEscudoRacing().then(setEscudoRacing);
+    supabase.rpc('contar_socios_aprobados').then(({ data }) => setTotalSocios(data));
   }, []);
 
   const carnet = primerCarnet(misSociosAprobados);
@@ -216,6 +218,15 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
           <div style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 30, color: PALETTE.chalk, letterSpacing: 1 }}>
             {nombreMostrar}
           </div>
+          {totalSocios !== null && totalSocios > 0 && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10,
+              background: 'rgba(201,162,75,0.12)', border: '1px solid rgba(201,162,75,0.35)', borderRadius: 999,
+              padding: '4px 12px', fontFamily: fontStack.label, fontSize: 12, fontWeight: 700, color: PALETTE.brass,
+            }}>
+              <Users size={13} /> Ya somos {totalSocios} {totalSocios === 1 ? 'socio' : 'socios'}
+            </div>
+          )}
         </div>
 
         {carnet && <AvisoCarnet socio={carnet} />}
