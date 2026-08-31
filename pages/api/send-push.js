@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método no permitido' });
   }
 
-  const { cuentaId, title, body, url } = req.body;
+  const { cuentaId, title, body, url, soloAdmins } = req.body;
 
   if (!title || !body) {
     return res.status(400).json({ error: 'Faltan título o texto' });
@@ -25,7 +25,11 @@ export default async function handler(req, res) {
 
   let suscripciones = [];
 
-  if (cuentaId) {
+  if (soloAdmins) {
+    const { data, error } = await supabaseAdmin.rpc('obtener_suscripciones_admins');
+    if (error) console.error('Error obteniendo suscripciones de admins:', error);
+    suscripciones = data || [];
+  } else if (cuentaId) {
     const { data, error } = await supabaseAdmin.rpc('obtener_suscripciones_de_cuenta', { p_cuenta_id: cuentaId });
     if (error) console.error('Error obteniendo suscripciones de cuenta:', error);
     suscripciones = data || [];
@@ -35,7 +39,7 @@ export default async function handler(req, res) {
     suscripciones = data || [];
   }
 
-  console.log(`[send-push] Encontradas ${suscripciones.length} suscripciones. cuentaId=${cuentaId || 'todas'}`);
+  console.log(`[send-push] Encontradas ${suscripciones.length} suscripciones. soloAdmins=${!!soloAdmins} cuentaId=${cuentaId || 'todas'}`);
 
   const payload = JSON.stringify({ title, body, url: url || '/inicio' });
 
