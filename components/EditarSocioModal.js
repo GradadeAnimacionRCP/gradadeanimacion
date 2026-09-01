@@ -4,7 +4,7 @@ import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { CropModal } from './CropModal';
 import { CARGOS } from '../lib/cargos';
-import { Camera } from 'lucide-react';
+import { Camera, Check } from 'lucide-react';
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
 
@@ -35,7 +35,7 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
   const [apellidos, setApellidos] = useState(socio.apellidos);
   const [tipo, setTipo] = useState(socio.tipo || 'General');
   const [foto, setFoto] = useState(socio.foto || null);
-  const [cargo, setCargo] = useState(socio.cargo || '');
+  const [cargos, setCargos] = useState(socio.cargos || []);
   const [cropSrc, setCropSrc] = useState(null);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
@@ -47,12 +47,16 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
     try { setCropSrc(await prepararFotoParaRecorte(f)); } catch {}
   };
 
+  const toggleCargo = (clave) => {
+    setCargos((prev) => prev.includes(clave) ? prev.filter((c) => c !== clave) : [...prev, clave]);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await supabase.rpc('admin_editar_socio', {
       p_admin_id: adminId, p_id: socio.id, p_nombre: nombre, p_apellidos: apellidos, p_tipo: tipo, p_foto: foto,
     });
-    await supabase.from('socios').update({ cargo: cargo || null }).eq('id', socio.id);
+    await supabase.from('socios').update({ cargos }).eq('id', socio.id);
     setSaving(false);
     onSaved();
   };
@@ -96,23 +100,27 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
             ))}
           </div>
         </Field>
-        <Field label="Cargo o rol en la grada (opcional)">
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <button onClick={() => setCargo('')} style={{
-              padding: '6px 11px', borderRadius: 999, fontFamily: fontStack.label, fontWeight: 700, fontSize: 12, cursor: 'pointer',
-              background: cargo === '' ? PALETTE.stripe : 'rgba(255,255,255,0.06)', color: cargo === '' ? PALETTE.chalk : 'rgba(244,246,241,0.75)',
-              border: `1px solid ${cargo === '' ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
-            }}>Ninguno</button>
-            {Object.entries(CARGOS).map(([clave, info]) => (
-              <button key={clave} onClick={() => setCargo(clave)} style={{
-                padding: '6px 11px', borderRadius: 999, fontFamily: fontStack.label, fontWeight: 700, fontSize: 12, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: cargo === clave ? PALETTE.stripe : 'rgba(255,255,255,0.06)', color: cargo === clave ? PALETTE.chalk : 'rgba(244,246,241,0.75)',
-                border: `1px solid ${cargo === clave ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
-              }}>
-                <span style={{ fontSize: 14 }}>{info.emoji}</span> {clave.charAt(0).toUpperCase() + clave.slice(1)}
-              </button>
-            ))}
+        <Field label="Cargos o roles en la grada (puedes marcar varios)">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {Object.entries(CARGOS).map(([clave, info]) => {
+              const marcado = cargos.includes(clave);
+              return (
+                <button key={clave} onClick={() => toggleCargo(clave)} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
+                  background: marcado ? 'rgba(200,30,44,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${marcado ? PALETTE.stripe : 'rgba(244,246,241,0.15)'}`, textAlign: 'left', width: '100%',
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: marcado ? PALETTE.stripe : 'transparent', border: marcado ? 'none' : '1.5px solid rgba(244,246,241,0.35)',
+                  }}>
+                    {marcado && <Check size={13} color={PALETTE.chalk} strokeWidth={3} />}
+                  </div>
+                  <span style={{ fontSize: 16 }}>{info.emoji}</span>
+                  <span style={{ fontSize: 13, color: PALETTE.chalk }}>{info.etiqueta}</span>
+                </button>
+              );
+            })}
           </div>
         </Field>
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
