@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { PALETTE, fontStack } from '../styles/tema';
 import { estadoMember, formatFecha, formatNumeroSocio, temporadaLabel, ESTADO_COLOR, ESTADO_LABEL } from '../lib/socios';
 import { getFondoTemporada, temporadaKeyDeFecha } from '../lib/temporada';
+import { infoCargo } from '../lib/cargos';
 import { Users } from 'lucide-react';
 
 export function CarnetCard({ socio }) {
   const [flipped, setFlipped] = useState(false);
   const [fondo, setFondo] = useState(null);
+  const [mostrarCargo, setMostrarCargo] = useState(false);
 
   useEffect(() => {
     if (!socio) return;
@@ -19,9 +21,33 @@ export function CarnetCard({ socio }) {
   const est = estadoMember(socio);
   const puedeGirar = est === 'activo';
   const nombreCompleto = `${socio.nombre} ${socio.apellidos}`.toUpperCase();
+  const cargo = infoCargo(socio.cargo);
+
+  const handleClickInsignia = (e) => {
+    e.stopPropagation();
+    setMostrarCargo(true);
+  };
 
   return (
     <div style={{ width: '100%', maxWidth: 380, margin: '0 auto' }}>
+      {mostrarCargo && cargo && (
+        <div onClick={() => setMostrarCargo(false)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 90,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: `linear-gradient(160deg, ${PALETTE.pitch} 0%, ${PALETTE.pitchDark} 85%)`,
+            border: `1px solid ${PALETTE.brass}55`, borderRadius: 18, padding: '28px 24px',
+            textAlign: 'center', maxWidth: 300,
+          }}>
+            <div style={{ fontSize: 44, marginBottom: 10 }}>{cargo.emoji}</div>
+            <div style={{ color: PALETTE.chalk, fontFamily: fontStack.heading, fontWeight: 700, fontSize: 15.5, lineHeight: 1.4 }}>
+              {cargo.etiqueta}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ perspective: 1400 }}>
         <div
           onClick={() => { if (puedeGirar) setFlipped((f) => !f); }}
@@ -41,13 +67,25 @@ export function CarnetCard({ socio }) {
             backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           }}>
             {fondo && (
-              <div style={{
-                position: 'absolute', inset: 0, backgroundImage: `url(${fondo})`, backgroundSize: 'cover', backgroundPosition: 'center 35%',
-                opacity: fondo ? 1 : 0, transition: 'opacity 0.6s ease',
-              }} />
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${fondo})`, backgroundSize: 'cover', backgroundPosition: 'center 35%' }} />
             )}
             <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(165deg, ${PALETTE.pitch}66 0%, ${PALETTE.pitchDark}99 78%)` }} />
             <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${PALETTE.ink}80 0%, transparent 22%, transparent 78%, ${PALETTE.ink}80 100%)` }} />
+
+            {cargo && (
+              <div
+                onClick={handleClickInsignia}
+                title={cargo.etiqueta}
+                style={{
+                  position: 'absolute', top: 14, right: 14, zIndex: 2, cursor: 'pointer',
+                  width: 34, height: 34, borderRadius: '50%', background: 'rgba(10,10,10,0.55)',
+                  border: `1.5px solid ${PALETTE.brass}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 17, boxShadow: '0 4px 10px -2px rgba(0,0,0,0.5)',
+                }}
+              >
+                {cargo.emoji}
+              </div>
+            )}
 
             <div style={{ position: 'relative', padding: '16px 18px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <img src="/escudo.png" alt="" style={{ width: 34, height: 34 }} />
