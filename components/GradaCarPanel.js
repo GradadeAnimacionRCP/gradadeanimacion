@@ -3,22 +3,10 @@ import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { formatNumeroSocio } from '../lib/socios';
-import { Car, Users, Plus, Trash2, Check, X, MessageCircle, CheckCircle2 } from 'lucide-react';
+import { Car, Users, Plus, Trash2, Check, X, MessageCircle, CheckCircle2, HandHelping } from 'lucide-react';
 
 function limpiarTelefono(t) {
   return t.replace(/[^\d+]/g, '');
-}
-
-async function enviarPushCoche({ cuentaId, title, body }) {
-  try {
-    await fetch('/api/send-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cuentaId, title, body, url: '/calendario' }),
-    });
-  } catch (err) {
-    console.error('No se pudo enviar el aviso:', err);
-  }
 }
 
 function FotoMini({ foto, size = 40 }) {
@@ -70,17 +58,15 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
     setProcesando(false);
     if (error) { alert(error.message); return; }
     if (aceptar) {
-      enviarPushCoche({
-        cuentaId: solicitud.cuenta_id,
-        title: '✅ ¡Plaza confirmada!',
-        body: 'El conductor ha confirmado tu plaza para el próximo partido.',
-      });
+      fetch('/api/send-push', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cuentaId: solicitud.cuenta_id, title: '✅ ¡Plaza confirmada!', body: 'El conductor ha confirmado tu plaza para el próximo partido.', url: '/calendario' }),
+      }).catch(() => {});
     } else {
-      enviarPushCoche({
-        cuentaId: solicitud.cuenta_id,
-        title: '❌ Solicitud rechazada',
-        body: 'El conductor no ha podido aceptar tu solicitud de plaza esta vez.',
-      });
+      fetch('/api/send-push', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cuentaId: solicitud.cuenta_id, title: '❌ Solicitud rechazada', body: 'El conductor no ha podido aceptar tu solicitud de plaza esta vez.', url: '/calendario' }),
+      }).catch(() => {});
     }
     cargarSolicitantes();
     onCambio();
@@ -142,11 +128,14 @@ function ViajeCard({ viaje, sesion, misSocios, esMio, onCambio, confirm }) {
     cargarMisSolicitudes();
     onCambio();
 
-    enviarPushCoche({
-      cuentaId: viaje.cuenta_id,
-      title: '🚗 Nueva petición de plaza',
-      body: `${nombres.join(', ')} ${nombres.length === 1 ? 'quiere' : 'quieren'} ir en tu coche al próximo partido.`,
-    });
+    fetch('/api/send-push', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cuentaId: viaje.cuenta_id, title: '🚗 Nueva petición de plaza',
+        body: `${nombres.join(', ')} ${nombres.length === 1 ? 'quiere' : 'quieren'} ir en tu coche al próximo partido.`,
+        url: '/calendario',
+      }),
+    }).catch(() => {});
   };
 
   return (
@@ -348,10 +337,14 @@ function NuevoViajeForm({ partidoId, sesion, misSocios, onCreado, onCancelar }) 
     setGuardando(false);
     if (dbError) { setError(dbError.message); return; }
 
-    enviarPushCoche({
-      title: '🚗 Nuevo coche disponible',
-      body: 'Alguien ha ofrecido coche compartido para el próximo partido. Échale un vistazo en GradaCar.',
-    });
+    fetch('/api/send-push', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '🚗 Nuevo coche disponible',
+        body: 'Alguien ha ofrecido coche compartido para el próximo partido. Échale un vistazo en GradaCar.',
+        url: '/calendario',
+      }),
+    }).catch(() => {});
 
     onCreado();
   };
@@ -403,42 +396,202 @@ function NuevoViajeForm({ partidoId, sesion, misSocios, onCreado, onCancelar }) 
   );
 }
 
+function NecesidadCard({ necesidad, sesion, esMia, onCambio, confirm }) {
+  const handleEliminar = async () => {
+    if (!(await confirm('¿Eliminar esta solicitud de coche?'))) return;
+    await supabase.rpc('eliminar_necesidad_coche', { p_cuenta_id: sesion.id, p_id: necesidad.id });
+    onCambio();
+  };
+
+  const handleContactar = async () => {
+    const { data: telefono } = await supabase.rpc('obtener_telefono_necesidad', { p_id: necesidad.id });
+    if (!telefono) return;
+    window.open(`https://wa.me/${limpiarTelefono(telefono)}`, '_blank');
+  };
+
+  return (
+    <div style={{ background: 'rgba(80,150,255,0.06)', border: '1px solid rgba(80,150,255,0.3)', borderRadius: 16, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <FotoMini foto={necesidad.foto} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 14.5, color: PALETTE.chalk }}>
+            {necesidad.nombre} {necesidad.apellidos || ''}
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Users size={12} /> {necesidad.personas} {necesidad.personas === 1 ? 'persona' : 'personas'} necesitan sitio
+          </div>
+        </div>
+      </div>
+      {necesidad.comentario && (
+        <p style={{ fontSize: 13, color: 'rgba(244,246,241,0.7)', margin: '0 0 12px', lineHeight: 1.5 }}>{necesidad.comentario}</p>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="ghost" onClick={handleContactar} style={{ flex: 1, fontSize: 13 }}>
+          <MessageCircle size={15} /> Contactar por WhatsApp
+        </Button>
+        {esMia && (
+          <Button variant="danger" onClick={handleEliminar} style={{ fontSize: 13 }}>
+            <Trash2 size={14} />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NuevaNecesidadForm({ partidoId, sesion, misSocios, onCreado, onCancelar }) {
+  const misSociosValidos = (misSocios || []).filter((s) => s.estado_solicitud === 'aprobado');
+  const [socioId, setSocioId] = useState(misSociosValidos[0]?.id || '');
+  const [personas, setPersonas] = useState('1');
+  const [comentario, setComentario] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [error, setError] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  const handleCrear = async () => {
+    setError('');
+    if (!socioId || !personas || !telefono.trim()) {
+      setError('Elige tu carnet, las personas y el teléfono.');
+      return;
+    }
+    setGuardando(true);
+    const { error: dbError } = await supabase.rpc('crear_necesidad_coche', {
+      p_cuenta_id: sesion.id, p_partido_id: partidoId, p_socio_id: socioId,
+      p_personas: parseInt(personas, 10), p_comentario: comentario.trim() || null, p_telefono: telefono.trim(),
+    });
+    setGuardando(false);
+    if (dbError) { setError(dbError.message); return; }
+
+    fetch('/api/send-push', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '🙋 Alguien necesita coche',
+        body: 'Un socio necesita que le lleven al próximo partido. Échale un vistazo en GradaCar.',
+        url: '/calendario',
+      }),
+    }).catch(() => {});
+
+    onCreado();
+  };
+
+  return (
+    <div style={{ background: 'rgba(80,150,255,0.08)', border: '1px solid rgba(80,150,255,0.35)', borderRadius: 16, padding: 16 }}>
+      <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 15, color: PALETTE.chalk, marginBottom: 12 }}>
+        Necesito que me lleven
+      </div>
+
+      {misSociosValidos.length > 1 && (
+        <Field label="Tu carnet">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {misSociosValidos.map((s) => (
+              <button key={s.id} onClick={() => setSocioId(s.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
+                background: socioId === s.id ? 'rgba(80,150,255,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${socioId === s.id ? '#6fa8ff' : 'rgba(244,246,241,0.15)'}`,
+                textAlign: 'left', color: PALETTE.chalk, fontSize: 13,
+              }}>
+                <FotoMini foto={s.foto} size={28} />
+                {s.nombre} {s.apellidos}
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
+
+      <Field label="¿Cuántas personas necesitáis sitio?">
+        <input type="number" min="1" style={inputStyle} value={personas} onChange={(e) => setPersonas(e.target.value)} placeholder="Ej. 2" />
+      </Field>
+      <Field label="Comentario (opcional)">
+        <input style={inputStyle} value={comentario} onChange={(e) => setComentario(e.target.value)} placeholder="Ej. Vivo cerca del estadio, cualquier zona me vale" />
+      </Field>
+      <Field label="Tu teléfono de WhatsApp (solo lo verán quienes ofrezcan coche)">
+        <input type="tel" style={inputStyle} value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 600123456" />
+      </Field>
+      {error && <div style={{ color: '#ff8a8a', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Button variant="ghost" onClick={onCancelar} disabled={guardando} style={{ flex: 1 }}>Cancelar</Button>
+        <Button variant="primary" onClick={handleCrear} disabled={guardando} style={{ flex: 1 }}>
+          {guardando ? 'Publicando...' : 'Publicar'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function GradaCarPanel({ partidoId, sesion, misSocios, confirm }) {
   const [viajes, setViajes] = useState(undefined);
-  const [creando, setCreando] = useState(false);
+  const [necesidades, setNecesidades] = useState(undefined);
+  const [creandoViaje, setCreandoViaje] = useState(false);
+  const [creandoNecesidad, setCreandoNecesidad] = useState(false);
 
-  const cargar = useCallback(async () => {
+  const cargarViajes = useCallback(async () => {
     const { data } = await supabase.rpc('listar_viajes_coche', { p_partido_id: partidoId });
     setViajes(data || []);
   }, [partidoId]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  const cargarNecesidades = useCallback(async () => {
+    const { data } = await supabase.rpc('listar_necesidades_coche', { p_partido_id: partidoId });
+    setNecesidades(data || []);
+  }, [partidoId]);
+
+  useEffect(() => { cargarViajes(); cargarNecesidades(); }, [cargarViajes, cargarNecesidades]);
 
   const misSociosValidos = (misSocios || []).filter((s) => s.estado_solicitud === 'aprobado');
   if (misSociosValidos.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {viajes === undefined ? (
-        <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.5)' }}>Cargando...</div>
-      ) : viajes.length === 0 && !creando ? (
-        <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
-          <Car size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
-          <p style={{ fontSize: 13.5 }}>Todavía nadie ha ofrecido coche para este partido.</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Car size={14} /> Ofrecen coche
         </div>
-      ) : (
-        viajes.map((v) => (
-          <ViajeCard key={v.id} viaje={v} sesion={sesion} misSocios={misSocios} esMio={v.cuenta_id === sesion.id} onCambio={cargar} confirm={confirm} />
-        ))
-      )}
+        {viajes === undefined ? (
+          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.5)' }}>Cargando...</div>
+        ) : viajes.length === 0 && !creandoViaje ? (
+          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
+            <Car size={28} style={{ opacity: 0.4, marginBottom: 8 }} />
+            <p style={{ fontSize: 13.5 }}>Todavía nadie ha ofrecido coche para este partido.</p>
+          </div>
+        ) : (
+          viajes.map((v) => (
+            <ViajeCard key={v.id} viaje={v} sesion={sesion} misSocios={misSocios} esMio={v.cuenta_id === sesion.id} onCambio={cargarViajes} confirm={confirm} />
+          ))
+        )}
 
-      {creando ? (
-        <NuevoViajeForm partidoId={partidoId} sesion={sesion} misSocios={misSocios} onCreado={() => { setCreando(false); cargar(); }} onCancelar={() => setCreando(false)} />
-      ) : (
-        <Button variant="brass" onClick={() => setCreando(true)} style={{ width: '100%' }}>
-          <Plus size={16} /> Ofrecer coche para este partido
-        </Button>
-      )}
+        {creandoViaje ? (
+          <NuevoViajeForm partidoId={partidoId} sesion={sesion} misSocios={misSocios} onCreado={() => { setCreandoViaje(false); cargarViajes(); }} onCancelar={() => setCreandoViaje(false)} />
+        ) : (
+          <Button variant="brass" onClick={() => setCreandoViaje(true)} style={{ width: '100%' }}>
+            <Plus size={16} /> Ofrecer coche para este partido
+          </Button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ fontFamily: fontStack.label, fontSize: 12, color: '#6fa8ff', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <HandHelping size={14} /> Buscan coche
+        </div>
+        {necesidades === undefined ? (
+          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.5)' }}>Cargando...</div>
+        ) : necesidades.length === 0 && !creandoNecesidad ? (
+          <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
+            <HandHelping size={28} style={{ opacity: 0.4, marginBottom: 8 }} />
+            <p style={{ fontSize: 13.5 }}>Nadie ha pedido coche todavía para este partido.</p>
+          </div>
+        ) : (
+          necesidades.map((n) => (
+            <NecesidadCard key={n.id} necesidad={n} sesion={sesion} esMia={n.cuenta_id === sesion.id} onCambio={cargarNecesidades} confirm={confirm} />
+          ))
+        )}
+
+        {creandoNecesidad ? (
+          <NuevaNecesidadForm partidoId={partidoId} sesion={sesion} misSocios={misSocios} onCreado={() => { setCreandoNecesidad(false); cargarNecesidades(); }} onCancelar={() => setCreandoNecesidad(false)} />
+        ) : (
+          <Button variant="ghost" onClick={() => setCreandoNecesidad(true)} style={{ width: '100%', borderColor: 'rgba(80,150,255,0.4)', color: '#6fa8ff' }}>
+            <HandHelping size={16} /> Necesito que me lleven
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
