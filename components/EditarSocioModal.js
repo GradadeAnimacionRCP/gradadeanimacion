@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { CropModal } from './CropModal';
+import { CARGOS } from '../lib/cargos';
 import { Camera } from 'lucide-react';
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
@@ -34,6 +35,7 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
   const [apellidos, setApellidos] = useState(socio.apellidos);
   const [tipo, setTipo] = useState(socio.tipo || 'General');
   const [foto, setFoto] = useState(socio.foto || null);
+  const [cargo, setCargo] = useState(socio.cargo || '');
   const [cropSrc, setCropSrc] = useState(null);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
@@ -50,6 +52,7 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
     await supabase.rpc('admin_editar_socio', {
       p_admin_id: adminId, p_id: socio.id, p_nombre: nombre, p_apellidos: apellidos, p_tipo: tipo, p_foto: foto,
     });
+    await supabase.from('socios').update({ cargo: cargo || null }).eq('id', socio.id);
     setSaving(false);
     onSaved();
   };
@@ -59,7 +62,7 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
       {cropSrc && (
         <CropModal src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={(dataUrl) => { setFoto(dataUrl); setCropSrc(null); }} />
       )}
-      <div onClick={(e) => e.stopPropagation()} style={{ background: PALETTE.pitchDark, borderRadius: '20px 20px 0 0', padding: 20, width: '100%', maxWidth: 420, border: '1px solid rgba(201,162,75,0.3)' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: PALETTE.pitchDark, borderRadius: '20px 20px 0 0', padding: 20, width: '100%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', border: '1px solid rgba(201,162,75,0.3)' }}>
         <h3 style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, margin: '0 0 14px' }}>Editar socio</h3>
         <Field label="Nombre">
           <input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} />
@@ -90,6 +93,25 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
                 background: tipo === t ? PALETTE.stripe : 'rgba(255,255,255,0.06)', color: tipo === t ? PALETTE.chalk : 'rgba(244,246,241,0.75)',
                 border: `1px solid ${tipo === t ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
               }}>{t}</button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Cargo o rol en la grada (opcional)">
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button onClick={() => setCargo('')} style={{
+              padding: '6px 11px', borderRadius: 999, fontFamily: fontStack.label, fontWeight: 700, fontSize: 12, cursor: 'pointer',
+              background: cargo === '' ? PALETTE.stripe : 'rgba(255,255,255,0.06)', color: cargo === '' ? PALETTE.chalk : 'rgba(244,246,241,0.75)',
+              border: `1px solid ${cargo === '' ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+            }}>Ninguno</button>
+            {Object.entries(CARGOS).map(([clave, info]) => (
+              <button key={clave} onClick={() => setCargo(clave)} style={{
+                padding: '6px 11px', borderRadius: 999, fontFamily: fontStack.label, fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: cargo === clave ? PALETTE.stripe : 'rgba(255,255,255,0.06)', color: cargo === clave ? PALETTE.chalk : 'rgba(244,246,241,0.75)',
+                border: `1px solid ${cargo === clave ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+              }}>
+                <span style={{ fontSize: 14 }}>{info.emoji}</span> {clave.charAt(0).toUpperCase() + clave.slice(1)}
+              </button>
             ))}
           </div>
         </Field>
