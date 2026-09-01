@@ -53,11 +53,17 @@ export function EditarSocioModal({ socio, adminId, onClose, onSaved }) {
 
   const handleSave = async () => {
     setSaving(true);
-    await supabase.rpc('admin_editar_socio', {
+    const { error: errorDatos } = await supabase.rpc('admin_editar_socio', {
       p_admin_id: adminId, p_id: socio.id, p_nombre: nombre, p_apellidos: apellidos, p_tipo: tipo, p_foto: foto,
     });
-    await supabase.from('socios').update({ cargos }).eq('id', socio.id);
+    const { error: errorCargos } = await supabase.rpc('admin_actualizar_cargos', {
+      p_admin_id: adminId, p_id: socio.id, p_cargos: cargos,
+    });
     setSaving(false);
+    if (errorDatos || errorCargos) {
+      alert('Error al guardar: ' + (errorDatos?.message || errorCargos?.message));
+      return;
+    }
     onSaved();
   };
 
