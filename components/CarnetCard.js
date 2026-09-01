@@ -8,7 +8,7 @@ import { Users } from 'lucide-react';
 export function CarnetCard({ socio }) {
   const [flipped, setFlipped] = useState(false);
   const [fondo, setFondo] = useState(null);
-  const [mostrarCargo, setMostrarCargo] = useState(false);
+  const [cargoActivo, setCargoActivo] = useState(null);
 
   useEffect(() => {
     if (!socio) return;
@@ -21,17 +21,17 @@ export function CarnetCard({ socio }) {
   const est = estadoMember(socio);
   const puedeGirar = est === 'activo';
   const nombreCompleto = `${socio.nombre} ${socio.apellidos}`.toUpperCase();
-  const cargo = infoCargo(socio.cargo);
+  const cargos = (socio.cargos || []).map((c) => infoCargo(c)).filter(Boolean);
 
-  const handleClickInsignia = (e) => {
+  const handleClickInsignia = (e, cargo) => {
     e.stopPropagation();
-    setMostrarCargo(true);
+    setCargoActivo(cargo);
   };
 
   return (
     <div style={{ width: '100%', maxWidth: 380, margin: '0 auto' }}>
-      {mostrarCargo && cargo && (
-        <div onClick={() => setMostrarCargo(false)} style={{
+      {cargoActivo && (
+        <div onClick={() => setCargoActivo(null)} style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 90,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
         }}>
@@ -40,9 +40,9 @@ export function CarnetCard({ socio }) {
             border: `1px solid ${PALETTE.brass}55`, borderRadius: 18, padding: '28px 24px',
             textAlign: 'center', maxWidth: 300,
           }}>
-            <div style={{ fontSize: 44, marginBottom: 10 }}>{cargo.emoji}</div>
+            <div style={{ fontSize: 44, marginBottom: 10 }}>{cargoActivo.emoji}</div>
             <div style={{ color: PALETTE.chalk, fontFamily: fontStack.heading, fontWeight: 700, fontSize: 15.5, lineHeight: 1.4 }}>
-              {cargo.etiqueta}
+              {cargoActivo.etiqueta}
             </div>
           </div>
         </div>
@@ -72,18 +72,22 @@ export function CarnetCard({ socio }) {
             <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(165deg, ${PALETTE.pitch}66 0%, ${PALETTE.pitchDark}99 78%)` }} />
             <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${PALETTE.ink}80 0%, transparent 22%, transparent 78%, ${PALETTE.ink}80 100%)` }} />
 
-            {cargo && (
-              <div
-                onClick={handleClickInsignia}
-                title={cargo.etiqueta}
-                style={{
-                  position: 'absolute', top: 14, right: 14, zIndex: 2, cursor: 'pointer',
-                  width: 34, height: 34, borderRadius: '50%', background: 'rgba(10,10,10,0.55)',
-                  border: `1.5px solid ${PALETTE.brass}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 17, boxShadow: '0 4px 10px -2px rgba(0,0,0,0.5)',
-                }}
-              >
-                {cargo.emoji}
+            {cargos.length > 0 && (
+              <div style={{ position: 'absolute', top: 14, right: 14, zIndex: 2, display: 'flex', gap: 6 }}>
+                {cargos.map((c, i) => (
+                  <div
+                    key={i}
+                    onClick={(e) => handleClickInsignia(e, c)}
+                    title={c.etiqueta}
+                    style={{
+                      cursor: 'pointer', width: 30, height: 30, borderRadius: '50%', background: 'rgba(10,10,10,0.55)',
+                      border: `1.5px solid ${PALETTE.brass}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 15, boxShadow: '0 4px 10px -2px rgba(0,0,0,0.5)',
+                    }}
+                  >
+                    {c.emoji}
+                  </div>
+                ))}
               </div>
             )}
 
