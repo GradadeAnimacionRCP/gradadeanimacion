@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { anioTemporadaActual, getFondoTemporada, setFondoTemporada, eliminarFondoTemporada, prepararImagenFondo } from '../lib/temporada';
-import { getEscudoRacing, setEscudoRacing, prepararEscudo } from '../lib/config';
+import { getEscudoRacing, setEscudoRacing, prepararEscudo, getTelefonoSoporte, setTelefonoSoporte } from '../lib/config';
 import { Camera, Trash2 } from 'lucide-react';
 
 function TarjetaTemporada({ anio, etiqueta, colorEtiqueta, fondo, subiendo, onElegir, onQuitar }) {
@@ -38,6 +38,8 @@ export function PanelTemporada() {
   const anioAnterior = anioActual - 1;
   const [fondos, setFondos] = useState({});
   const [escudoRacing, setEscudoRacingState] = useState(null);
+  const [telefonoSoporte, setTelefonoSoporteState] = useState('');
+  const [guardandoTelefono, setGuardandoTelefono] = useState(false);
   const [loading, setLoading] = useState(true);
   const [subiendo, setSubiendo] = useState(null);
   const [error, setError] = useState('');
@@ -47,11 +49,12 @@ export function PanelTemporada() {
   const [buscadoManual, setBuscadoManual] = useState(null);
 
   const cargar = async () => {
-    const [anterior, actual, siguiente, escudo] = await Promise.all([
-      getFondoTemporada(anioAnterior), getFondoTemporada(anioActual), getFondoTemporada(anioSiguiente), getEscudoRacing(),
+    const [anterior, actual, siguiente, escudo, telefono] = await Promise.all([
+      getFondoTemporada(anioAnterior), getFondoTemporada(anioActual), getFondoTemporada(anioSiguiente), getEscudoRacing(), getTelefonoSoporte(),
     ]);
     setFondos({ [anioAnterior]: anterior, [anioActual]: actual, [anioSiguiente]: siguiente });
     setEscudoRacingState(escudo);
+    setTelefonoSoporteState(telefono || '');
     setLoading(false);
   };
 
@@ -118,6 +121,12 @@ export function PanelTemporada() {
     input.click();
   };
 
+  const handleGuardarTelefono = async () => {
+    setGuardandoTelefono(true);
+    await setTelefonoSoporte(telefonoSoporte.trim());
+    setGuardandoTelefono(false);
+  };
+
   if (loading) return <div style={{ color: PALETTE.chalk, textAlign: 'center', padding: 30 }}>Cargando...</div>;
 
   return (
@@ -136,6 +145,19 @@ export function PanelTemporada() {
         </div>
         <Button variant="brass" disabled={subiendo === 'escudo'} onClick={handleElegirEscudo} style={{ width: '100%' }}>
           <Camera size={15} /> {subiendo === 'escudo' ? 'Subiendo...' : escudoRacing ? 'Cambiar escudo' : 'Subir escudo'}
+        </Button>
+      </div>
+
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.12)', borderRadius: 16, padding: 16, marginBottom: 20 }}>
+        <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 600, fontSize: 15.5, marginBottom: 10 }}>
+          Teléfono de soporte
+        </div>
+        <p style={{ fontSize: 12, color: 'rgba(244,246,241,0.55)', margin: '0 0 12px', lineHeight: 1.5 }}>
+          Cuando un socio toque "Contactar soporte", se le abrirá WhatsApp con este número.
+        </p>
+        <input type="tel" style={inputStyle} placeholder="Ej. 600123456" value={telefonoSoporte} onChange={(e) => setTelefonoSoporteState(e.target.value)} />
+        <Button variant="brass" disabled={guardandoTelefono} onClick={handleGuardarTelefono} style={{ width: '100%', marginTop: 10 }}>
+          {guardandoTelefono ? 'Guardando...' : 'Guardar teléfono'}
         </Button>
       </div>
 
