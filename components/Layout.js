@@ -76,7 +76,7 @@ export function usePendientesGradaCar(sesion) {
       });
     };
     cargar();
-    const interval = setInterval(cargar, 20000);
+    const interval = setInterval(cargar, 60000);
     return () => clearInterval(interval);
   }, [sesion?.id]);
   return pendientes;
