@@ -11,6 +11,7 @@ import { Button, Field } from '../components/UI';
 import { CropModal } from '../components/CropModal';
 import { UserPlus, Search, Camera, Users, Calendar as CalendarIcon, Award, Shield, AlertTriangle, Newspaper, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { CompartirCarnet } from '../components/CompartirCarnet';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -281,7 +282,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
         {antiguedad && (
           <div style={{
             background: 'linear-gradient(135deg, rgba(201,162,75,0.15), rgba(200,30,44,0.1))',
-            border: '1px solid rgba(201,162,75,0.35)', borderRadius: 18, padding: '18px 20px', textAlign: 'center',
+            border: '1px solid rgba(201,162,75,0.35)', borderRadius: 18, padding: '18px 20px', textAlign: 'center', marginBottom: 18,
           }}>
             <Award size={22} color={PALETTE.brass} style={{ marginBottom: 8 }} />
             <div style={{ fontFamily: fontStack.label, fontSize: 11.5, color: 'rgba(244,246,241,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
@@ -291,6 +292,10 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
               {antiguedad}
             </div>
           </div>
+        )}
+
+        {carnet && (
+          <CompartirCarnet foto={carnet.foto} nombre={nombreMostrar} numeroSocio={carnet.numero_socio} antiguedad={antiguedad} />
         )}
       </div>
     </div>
