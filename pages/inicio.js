@@ -218,7 +218,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
             border: `2px solid ${PALETTE.brass}`, background: 'rgba(255,255,255,0.06)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {carnet?.foto ? <img src={carnet.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={32} color={PALETTE.chalk} opacity={0.5} />}
+            {carnet?.foto ? <img src={carnet.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src="/escudo.png" alt="" style={{ width: '65%', height: '65%', objectFit: 'contain', opacity: 0.6 }} />}
           </div>
           <div style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>
             {saludoActual()}
