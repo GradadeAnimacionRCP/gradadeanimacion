@@ -372,7 +372,7 @@ export default function Carnets() {
   useEffect(() => {
     if (!sesion) return;
     cargar(sesion.id);
-    const interval = setInterval(() => cargar(sesion.id), 5000);
+    const interval = setInterval(() => cargar(sesion.id), 30000);
     return () => clearInterval(interval);
   }, [sesion, cargar]);
 
