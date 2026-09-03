@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { getSesionGuardada, borrarSesion, tienePasswordTemporal } from '../lib/session';
 import { PALETTE, fontStack } from '../styles/tema';
-import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle, Lock as LockIcon } from 'lucide-react';
+import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle, Lock as LockIcon, Trophy } from 'lucide-react';
+import { useDiaPartido } from '../lib/diaPartido';
 
 let sesionCache = undefined;
 
@@ -87,6 +88,7 @@ export function Layout({ sesion, children }) {
   const [avisoTemporal, setAvisoTemporal] = useState(false);
   const tieneCarnet = useTieneCarnet(sesion);
   const pendientesGradaCar = usePendientesGradaCar(sesion);
+  const partidoHoy = useDiaPartido();
 
   useEffect(() => {
     setAvisoTemporal(tienePasswordTemporal());
@@ -126,10 +128,23 @@ export function Layout({ sesion, children }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: `radial-gradient(circle at 50% -10%, ${PALETTE.pitch} 0%, ${PALETTE.ink} 65%)`,
+      background: partidoHoy
+        ? `radial-gradient(circle at 50% -10%, #4a1005 0%, ${PALETTE.ink} 65%)`
+        : `radial-gradient(circle at 50% -10%, ${PALETTE.pitch} 0%, ${PALETTE.ink} 65%)`,
       display: 'flex', flexDirection: 'column',
       paddingTop: 'env(safe-area-inset-top, 0px)',
     }}>
+      {partidoHoy && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(201,162,75,0.2), rgba(200,30,44,0.25), rgba(201,162,75,0.2))',
+          borderBottom: `1px solid ${PALETTE.brass}`,
+          color: PALETTE.chalk, fontSize: 12.5, textAlign: 'center', padding: '9px 14px',
+          fontFamily: fontStack.label, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}>
+          <Trophy size={15} color={PALETTE.brass} />
+          ¡Hoy juega el Racing! {partidoHoy.es_local ? 'vs' : 'en'} {partidoHoy.rival}{partidoHoy.hora ? ` · ${partidoHoy.hora.slice(0, 5)}` : ''}
+        </div>
+      )}
       {avisoTemporal && (
         <div style={{
           background: 'rgba(255,176,32,0.15)', borderBottom: '1px solid rgba(255,176,32,0.4)',
