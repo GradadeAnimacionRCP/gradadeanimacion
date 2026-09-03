@@ -12,6 +12,8 @@ import { CropModal } from '../components/CropModal';
 import { UserPlus, Search, Camera, Users, Calendar as CalendarIcon, Award, Shield, AlertTriangle, Newspaper, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { CompartirCarnet } from '../components/CompartirCarnet';
+import { CelebracionVictoria } from '../components/CelebracionVictoria';
+import { yaVistaCelebracion, marcarCelebracionVista } from '../lib/celebracion';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -179,6 +181,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
   const [ultimaNoticia, setUltimaNoticia] = useState(undefined);
   const [escudoRacing, setEscudoRacing] = useState(null);
   const [totalSocios, setTotalSocios] = useState(null);
+  const [mostrarCelebracion, setMostrarCelebracion] = useState(false);
 
   useEffect(() => {
     supabase.from('partidos').select('*').is('resultado', null)
@@ -187,7 +190,21 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
 
     supabase.from('partidos').select('*').not('resultado', 'is', null)
       .order('fecha', { ascending: false }).limit(5)
-      .then(({ data }) => setJugados(data || []));
+      .then(({ data }) => {
+        const lista = data || [];
+        setJugados(lista);
+        const ultimo = lista[0];
+        if (ultimo) {
+          const partes = (ultimo.resultado || '').split('-').map((n) => parseInt(n.trim(), 10));
+          if (partes.length === 2 && !partes.some(isNaN)) {
+            const [gA, gB] = partes;
+            const ganamos = ultimo.es_local ? gA > gB : gB > gA;
+            if (ganamos && !yaVistaCelebracion(ultimo.id)) {
+              setMostrarCelebracion(true);
+            }
+          }
+        }
+      });
 
     supabase.from('noticias').select('*').order('fecha', { ascending: false }).limit(1)
       .then(({ data }) => setUltimaNoticia(data && data[0] ? data[0] : null));
@@ -298,6 +315,10 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
           <CompartirCarnet foto={carnet.foto} nombre={nombreMostrar} numeroSocio={carnet.numero_socio} antiguedad={antiguedad} />
         )}
       </div>
+
+      {mostrarCelebracion && jugados && jugados[0] && (
+        <CelebracionVictoria onFin={() => { marcarCelebracionVista(jugados[0].id); setMostrarCelebracion(false); }} />
+      )}
     </div>
   );
 }
