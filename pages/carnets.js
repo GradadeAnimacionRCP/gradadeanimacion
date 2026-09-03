@@ -157,7 +157,7 @@ function TarjetaSocio({ socio, cuentaId, onCambio, confirm }) {
           {socio.solicitud_renovacion_fecha ? (
             <div style={{ textAlign: 'center', fontSize: 12.5, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700, lineHeight: 1.6 }}>
               ✓ Solicitud de renovación enviada el {formatFecha(socio.solicitud_renovacion_fecha)}
-              {socio.solicitud_renovacion_comprobante ? ' (con comprobante adjunto)' : ' (sin comprobante)'}.
+              {socio.tiene_comprobante ? ' (con comprobante adjunto)' : ' (sin comprobante)'}.
               <br />Un admin de la grada la revisará.
             </div>
           ) : !mostrarRenovacion ? (
@@ -363,6 +363,7 @@ export default function Carnets() {
   const [socios, setSocios] = useState(undefined);
   const [vista, setVista] = useState('actuales');
   const [formularioAbierto, setFormularioAbierto] = useState(null);
+  const [historialAbonos, setHistorialAbonos] = useState(undefined);
 
   const cargar = useCallback(async (cuentaId) => {
     const { data, error } = await supabase.rpc('mis_socios', { p_cuenta_id: cuentaId });
@@ -375,6 +376,21 @@ export default function Carnets() {
     const interval = setInterval(() => cargar(sesion.id), 30000);
     return () => clearInterval(interval);
   }, [sesion, cargar]);
+
+  const handleVerAntiguos = async () => {
+    setVista('antiguos');
+    if (historialAbonos !== undefined || !socios) return;
+    const conHistorial = socios.filter((s) => s.tiene_historial_abonos);
+    const resultados = await Promise.all(
+      conHistorial.map((s) => supabase.rpc('historial_abonos_de_socio', { p_cuenta_id: sesion.id, p_socio_id: s.id }))
+    );
+    const abonos = [];
+    conHistorial.forEach((s, idx) => {
+      const lista = resultados[idx].data || [];
+      lista.forEach((abono, i) => abonos.push({ socio: s, abono, idx: i }));
+    });
+    setHistorialAbonos(abonos);
+  };
 
   if (sesion === undefined) {
     return (
@@ -402,7 +418,7 @@ export default function Carnets() {
               color: vista === 'actuales' ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
               fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
             }}>Abonos actuales</button>
-            <button onClick={() => setVista('antiguos')} style={{
+            <button onClick={handleVerAntiguos} style={{
               flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer',
               border: `1px solid ${vista === 'antiguos' ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
               background: vista === 'antiguos' ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
@@ -429,19 +445,21 @@ export default function Carnets() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
-            {socios.flatMap((s) => (s.historial_abonos || [])).length === 0 ? (
+            {historialAbonos === undefined ? (
+              <div style={{ padding: '30px 0', display: 'flex', justifyContent: 'center' }}>
+                <LoadingCrest texto="Cargando abonos antiguos..." />
+              </div>
+            ) : historialAbonos.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 30, color: 'rgba(244,246,241,0.6)' }}>
                 <p>Todavía no tienes abonos de temporadas anteriores.</p>
               </div>
             ) : (
-              socios.flatMap((s) =>
-                (s.historial_abonos || []).map((abono, idx) => (
-                  <CarnetCard key={`${s.id}-${idx}`} socio={{
-                    numero_socio: abono.numeroSocio, nombre: s.nombre, apellidos: s.apellidos,
-                    foto: abono.foto, fecha_alta: abono.fechaAlta, fecha_caducidad: abono.fechaCaducidad, tipo: abono.tipo,
-                  }} />
-                ))
-              )
+              historialAbonos.map(({ socio: s, abono, idx }) => (
+                <CarnetCard key={`${s.id}-${idx}`} socio={{
+                  numero_socio: abono.numeroSocio, nombre: s.nombre, apellidos: s.apellidos,
+                  foto: abono.foto, fecha_alta: abono.fechaAlta, fecha_caducidad: abono.fechaCaducidad, tipo: abono.tipo,
+                }} />
+              ))
             )}
           </div>
         )}
