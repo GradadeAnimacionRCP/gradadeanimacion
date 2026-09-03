@@ -16,18 +16,6 @@ import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle } from 'lucide-reac
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
 
-async function enviarPush({ cuentaId, title, body, url }) {
-  try {
-    await fetch('/api/send-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cuentaId, title, body, url }),
-    });
-  } catch (err) {
-    console.error('No se pudo enviar el aviso:', err);
-  }
-}
-
 function filtrar(lista, query, campoFn) {
   const q = query.trim().toLowerCase();
   if (!q) return lista;
@@ -148,22 +136,22 @@ export default function Admin() {
     cargar();
 
     if (s.cuenta_id) {
-      enviarPush({
-        cuentaId: s.cuenta_id,
-        title: '¡Tu carnet ha sido validado! 🎉',
-        body: `Ya puedes ver tu carnet de socio ${formatNumeroSocio(s.numero_socio)}.`,
-        url: '/carnets',
-      });
+      fetch('/api/send-push', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cuentaId: s.cuenta_id, title: '¡Tu carnet ha sido validado! 🎉',
+          body: `Ya puedes ver tu carnet de socio ${formatNumeroSocio(s.numero_socio)}.`, url: '/carnets',
+        }),
+      }).catch(() => {});
     }
 
     const { data: total } = await supabase.rpc('contar_socios_aprobados');
     const metas = [100, 200, 300, 400, 500, 750, 1000];
     if (metas.includes(total)) {
-      enviarPush({
-        title: `¡Ya somos ${total} socios! 🔥`,
-        body: 'Gracias a toda la grada por hacerlo posible.',
-        url: '/inicio',
-      });
+      fetch('/api/send-push', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: `¡Ya somos ${total} socios! 🔥`, body: 'Gracias a toda la grada por hacerlo posible.', url: '/inicio' }),
+      }).catch(() => {});
     }
   };
   const handleRechazar = async (s) => {
@@ -317,7 +305,7 @@ export default function Admin() {
                     <div key={s.id} style={{ background: 'rgba(255,90,31,0.08)', border: '1px solid rgba(255,90,31,0.4)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {s.foto ? <img src={s.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={18} opacity={0.5} />}
+                          {s.foto ? <img src={s.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src="/escudo.png" alt="" style={{ width: '65%', height: '65%', objectFit: 'contain', opacity: 0.5 }} />}
                         </div>
                         <div>
                           <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14 }}>{s.nombre} {s.apellidos}</div>
@@ -443,7 +431,7 @@ export default function Admin() {
                 return (
                   <div key={s.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {s.foto ? <img src={s.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={16} opacity={0.5} />}
+                      {s.foto ? <img src={s.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src="/escudo.png" alt="" style={{ width: '65%', height: '65%', objectFit: 'contain', opacity: 0.5 }} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 140 }}>
                       <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{s.nombre} {s.apellidos}</div>
