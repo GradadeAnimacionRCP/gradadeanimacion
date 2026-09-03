@@ -3,13 +3,14 @@ import { supabase } from '../lib/supabase';
 import { useSesion, Layout, invalidarSesionCache } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
 import { LoadingCrest } from '../components/LoadingCrest';
+import { BotonSoporte } from '../components/BotonSoporte';
 import { borrarSesion, marcarPasswordTemporal } from '../lib/session';
 import { activarNotificaciones, desactivarNotificaciones, estaSuscrito } from '../lib/push';
 import { PALETTE, fontStack, inputStyle, authCardStyle } from '../styles/tema';
 import { Button, Field, CampoPassword } from '../components/UI';
 import { LogOut, Bell, BellOff, CheckCircle2 } from 'lucide-react';
 
-const CLAVE_MAESTRA = 'gradacereceda2026'; // debe coincidir con la que pusiste en la base de datos
+const CLAVE_MAESTRA = 'CAMBIA-ESTA-CLAVE-2027'; // debe coincidir con la que pusiste en la base de datos
 
 export default function CuentaPage() {
   const sesion = useSesion();
@@ -177,6 +178,10 @@ export default function CuentaPage() {
               <Bell size={16} /> {procesandoNotif ? 'Activando...' : 'Activar notificaciones'}
             </Button>
           )}
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <BotonSoporte sesion={sesion} />
         </div>
 
         <Button variant="ghost" onClick={handleLogout} style={{ width: '100%' }}>
