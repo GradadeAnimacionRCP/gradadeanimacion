@@ -113,6 +113,37 @@ export default async function handler(req, res) {
     }
   }
 
-  console.log(`[recordatorios] Renovaciones: ${avisosCaducados} avisos. Asistencia: ${avisosAsistencia} avisos.`);
-  res.status(200).json({ avisosCaducados, avisosAsistencia, partidoEncontrado: !!partido });
+  // ---------- 3. Aviso de "día de partido" ----------
+  const hoyFecha = new Date().toISOString().slice(0, 10);
+  const { data: partidoHoy, error: errorPartidoHoy } = await supabaseAdmin
+    .from('partidos')
+    .select('rival, hora, es_local')
+    .eq('fecha', hoyFecha)
+    .maybeSingle();
+
+  if (errorPartidoHoy) console.error('[recordatorios] Error buscando partido de hoy:', errorPartidoHoy);
+
+  let avisoDiaPartido = 0;
+  if (partidoHoy) {
+    const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+    const rivalTexto = partidoHoy.es_local ? `vs ${partidoHoy.rival}` : `en ${partidoHoy.rival}`;
+    const payload = JSON.stringify({
+      title: '🏆 ¡Hoy es día de Racing!',
+      body: `La app también se viste de gala. Partido ${rivalTexto}${partidoHoy.hora ? ` a las ${partidoHoy.hora.slice(0, 5)}` : ''}.`,
+      url: '/calendario',
+    });
+    for (const s of todasSuscripciones || []) {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        avisoDiaPartido++;
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
+        }
+      }
+    }
+  }
+
+  console.log(`[recordatorios] Renovaciones: ${avisosCaducados} avisos. Asistencia: ${avisosAsistencia} avisos. Día de partido: ${avisoDiaPartido} avisos.`);
+  res.status(200).json({ avisosCaducados, avisosAsistencia, avisoDiaPartido, partidoEncontrado: !!partido });
 }
