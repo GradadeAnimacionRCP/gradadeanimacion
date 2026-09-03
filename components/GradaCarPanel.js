@@ -3,11 +3,8 @@ import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { formatNumeroSocio } from '../lib/socios';
+import { limpiarTelefono } from '../lib/telefono';
 import { Car, Users, Plus, Trash2, Check, X, MessageCircle, CheckCircle2, HandHelping } from 'lucide-react';
-
-function limpiarTelefono(t) {
-  return t.replace(/[^\d+]/g, '');
-}
 
 function FotoMini({ foto, size = 40 }) {
   return (
