@@ -5,9 +5,11 @@ import { useConfirm } from '../components/ConfirmModal';
 import { LoadingCrest } from '../components/LoadingCrest';
 import { AsistenciaPartido } from '../components/AsistenciaPartido';
 import { GradaCarPanel } from '../components/GradaCarPanel';
+import { PrediccionPartido } from '../components/PrediccionPartido';
+import { RankingPredicciones } from '../components/RankingPredicciones';
 import { PALETTE, fontStack } from '../styles/tema';
 import { PartidoCard, partidoEsPasado, formatFechaPartido, IconoLocalizacion } from '../components/PartidoCard';
-import { Calendar, ChevronDown, Car } from 'lucide-react';
+import { Calendar, ChevronDown, Car, Trophy } from 'lucide-react';
 
 function PartidoResumen({ partido }) {
   const titulo = partido.es_local ? `vs ${partido.rival}` : `vs ${partido.rival} (fuera)`;
@@ -30,6 +32,12 @@ function PartidoResumen({ partido }) {
     </div>
   );
 }
+
+const TITULOS = {
+  calendario: { titulo: 'CALENDARIO', sub: 'Partidos en casa y fuera de la temporada' },
+  gradacar: { titulo: 'GRADACAR', sub: 'Comparte coche con la grada para el próximo partido' },
+  ranking: { titulo: 'RANKING', sub: 'Quién más acierta los resultados de la temporada' },
+};
 
 export default function CalendarioPage() {
   const sesion = useSesion();
@@ -85,10 +93,10 @@ export default function CalendarioPage() {
       <div style={{ padding: '18px 16px 40px' }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 32, margin: 0, letterSpacing: 2, color: PALETTE.chalk }}>
-            {vista === 'calendario' ? 'CALENDARIO' : 'GRADACAR'}
+            {TITULOS[vista].titulo}
           </h2>
           <p style={{ color: 'rgba(244,246,241,0.6)', fontSize: 13.5, marginTop: 4 }}>
-            {vista === 'calendario' ? 'Partidos en casa y fuera de la temporada' : 'Comparte coche con la grada para el próximo partido'}
+            {TITULOS[vista].sub}
           </p>
         </div>
 
@@ -104,6 +112,9 @@ export default function CalendarioPage() {
                 background: PALETTE.flare, border: `2px solid ${PALETTE.pitchDark}`,
               }} />
             )}
+          </button>
+          <button onClick={() => setVista('ranking')} style={pillStyle(vista === 'ranking')}>
+            <Trophy size={14} /> Ranking
           </button>
         </div>
 
@@ -125,6 +136,7 @@ export default function CalendarioPage() {
               <div style={{ marginBottom: 22 }}>
                 <PartidoCard partido={siguiente} destacado />
                 <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
+                <PrediccionPartido partido={siguiente} sesion={sesion} />
               </div>
 
               {resto.length > 0 && (
@@ -146,6 +158,7 @@ export default function CalendarioPage() {
                           <div style={{ padding: '0 10px 12px' }}>
                             <PartidoCard partido={p} />
                             <AsistenciaPartido partidoId={p.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
+                            <PrediccionPartido partido={p} sesion={sesion} />
                           </div>
                         )}
                       </div>
@@ -202,6 +215,8 @@ export default function CalendarioPage() {
             </div>
           )
         )}
+
+        {vista === 'ranking' && <RankingPredicciones />}
       </div>
     </Layout>
   );
