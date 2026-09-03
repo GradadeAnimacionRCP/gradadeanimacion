@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PALETTE } from '../styles/tema';
 import { Button } from './UI';
 import { formatNumeroSocio } from '../lib/socios';
+import { anioTemporadaActual } from '../lib/temporada';
 import { Share2 } from 'lucide-react';
 
 function cargarImagen(src) {
@@ -123,9 +124,10 @@ async function generarImagen({ foto, nombre, numeroSocio, antiguedad }) {
   ctx.font = '700 32px "Barlow Condensed", sans-serif';
   ctx.fillText('RACING CLUB PORTUENSE', centroX, ALTO - 140);
 
+  const anio = anioTemporadaActual();
   ctx.fillStyle = 'rgba(244,246,241,0.4)';
   ctx.font = '600 26px "Barlow Condensed", sans-serif';
-  ctx.fillText('GRADA DE ANIMACIÓN · TEMPORADA', centroX, ALTO - 90);
+  ctx.fillText(`GRADA DE ANIMACIÓN · TEMPORADA ${anio - 1}/${anio}`, centroX, ALTO - 90);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png', 0.95));
 }
