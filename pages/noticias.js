@@ -39,7 +39,7 @@ export default function NoticiasPage() {
   useEffect(() => {
     cargarNoticias();
     cargarProductos();
-    const interval = setInterval(() => { cargarNoticias(); cargarProductos(); }, 15000);
+    const interval = setInterval(() => { cargarNoticias(); cargarProductos(); }, 60000);
     return () => clearInterval(interval);
   }, [cargarNoticias, cargarProductos]);
 
