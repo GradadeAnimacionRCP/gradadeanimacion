@@ -3,7 +3,6 @@ import { PALETTE, fontStack } from '../styles/tema';
 import { estadoMember, formatFecha, formatNumeroSocio, temporadaLabel, ESTADO_COLOR, ESTADO_LABEL } from '../lib/socios';
 import { getFondoTemporada, temporadaKeyDeFecha } from '../lib/temporada';
 import { infoCargo } from '../lib/cargos';
-import { Users } from 'lucide-react';
 
 export function CarnetCard({ socio }) {
   const [flipped, setFlipped] = useState(false);
@@ -103,7 +102,7 @@ export function CarnetCard({ socio }) {
 
             <div style={{ position: 'relative', padding: '16px 18px 6px', display: 'flex', gap: 14, alignItems: 'center' }}>
               <div style={{ width: 76, height: 76, borderRadius: 14, flexShrink: 0, overflow: 'hidden', border: `2px solid ${PALETTE.brass}`, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {socio.foto ? <img src={socio.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={30} color={PALETTE.chalk} opacity={0.5} />}
+                {socio.foto ? <img src={socio.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src="/escudo.png" alt="" style={{ width: '65%', height: '65%', objectFit: 'contain', opacity: 0.6 }} />}
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: fontStack.label, fontSize: 11, letterSpacing: 1.5, color: PALETTE.stripeSoft, textTransform: 'uppercase', fontWeight: 700 }}>Socio de la grada</div>
