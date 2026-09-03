@@ -87,7 +87,7 @@ export default function Admin() {
     cargarNoticias();
     cargarProductos();
     cargarUsuarios();
-    const interval = setInterval(cargar, 8000);
+    const interval = setInterval(cargar, 30000);
     return () => clearInterval(interval);
   }, [sesion, cargar, cargarPartidos, cargarNoticias, cargarProductos, cargarUsuarios]);
 
@@ -696,12 +696,4 @@ export default function Admin() {
       )}
       {imagenAmpliada && (
         <div onClick={() => setImagenAmpliada(null)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 95,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, cursor: 'pointer',
-        }}>
-          <img src={imagenAmpliada} alt="Comprobante" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 12 }} />
-        </div>
-      )}
-    </Layout>
-  );
-}
+          position: 'fixed', inset: 0, background:
