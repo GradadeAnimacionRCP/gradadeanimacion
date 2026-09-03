@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { CompartirCarnet } from '../components/CompartirCarnet';
 import { CelebracionVictoria } from '../components/CelebracionVictoria';
 import { yaVistaCelebracion, marcarCelebracionVista } from '../lib/celebracion';
+import { modoUltraActivo, activarModoUltra, desactivarModoUltra } from '../lib/modoUltra';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -182,6 +183,13 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
   const [escudoRacing, setEscudoRacing] = useState(null);
   const [totalSocios, setTotalSocios] = useState(null);
   const [mostrarCelebracion, setMostrarCelebracion] = useState(false);
+  const [ultra, setUltra] = useState(false);
+  const [avisoUltra, setAvisoUltra] = useState(false);
+  const toquesRef = useRef([]);
+
+  useEffect(() => {
+    setUltra(modoUltraActivo());
+  }, []);
 
   useEffect(() => {
     supabase.from('partidos').select('*').is('resultado', null)
@@ -213,6 +221,19 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
     supabase.rpc('contar_socios_aprobados').then(({ data }) => setTotalSocios(data));
   }, []);
 
+  const handleTocarEscudo = () => {
+    const ahora = Date.now();
+    toquesRef.current = [...toquesRef.current, ahora].filter((t) => ahora - t < 2000);
+    if (toquesRef.current.length >= 5) {
+      toquesRef.current = [];
+      const nuevoEstado = !ultra;
+      if (nuevoEstado) activarModoUltra(); else desactivarModoUltra();
+      setUltra(nuevoEstado);
+      setAvisoUltra(true);
+      setTimeout(() => setAvisoUltra(false), 3000);
+    }
+  };
+
   const carnet = primerCarnet(misSociosAprobados);
   const nombreMostrar = carnet ? carnet.nombre : sesion.usuario;
   const antiguedad = carnet ? formatAntiguedad(fechaInicioSocio(carnet)) : '';
@@ -222,12 +243,27 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
 
   return (
     <div style={{ padding: '18px 18px 30px', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
-      <div style={{
-        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        width: 420, height: 420, opacity: 0.06, pointerEvents: 'none', zIndex: 0,
-      }}>
-        <img src="/escudo.png" alt="" style={{ width: '100%', height: '100%' }} />
+      <div
+        onClick={handleTocarEscudo}
+        style={{
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          width: 420, height: 420, opacity: ultra ? 0.1 : 0.06, pointerEvents: 'auto', zIndex: 0, cursor: 'default',
+        }}
+      >
+        <img src={ultra ? '/esqueleto.png' : '/escudo.png'} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
       </div>
+
+      {avisoUltra && (
+        <div style={{
+          position: 'fixed', top: '30%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 60,
+          background: ultra ? 'rgba(80,0,0,0.92)' : 'rgba(10,10,10,0.9)', border: `1px solid ${ultra ? '#C81E2C' : PALETTE.brass}`,
+          borderRadius: 16, padding: '18px 26px', textAlign: 'center', pointerEvents: 'none',
+        }}>
+          <div style={{ fontFamily: fontStack.heading, fontWeight: 800, fontSize: 18, color: PALETTE.chalk }}>
+            {ultra ? '💀 ¡MODO ULTRA ACTIVADO! 💀' : '✅ Modo ultra desactivado'}
+          </div>
+        </div>
+      )}
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ ...authCardStyle, textAlign: 'center', marginBottom: 18 }}>
@@ -251,6 +287,11 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
               padding: '4px 12px', fontFamily: fontStack.label, fontSize: 12, fontWeight: 700, color: PALETTE.brass,
             }}>
               <Users size={13} /> Ya somos {totalSocios} {totalSocios === 1 ? 'socio' : 'socios'}
+            </div>
+          )}
+          {ultra && (
+            <div style={{ marginTop: 10, fontSize: 11, color: 'rgba(244,246,241,0.4)', fontFamily: fontStack.label }}>
+              💀 Modo ultra activo · toca 5 veces el fondo para desactivarlo
             </div>
           )}
         </div>
