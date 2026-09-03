@@ -31,17 +31,6 @@ function PartidoResumen({ partido }) {
   );
 }
 
-function tabPillStyle(active) {
-  return {
-    flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex', position: 'relative',
-    alignItems: 'center', justifyContent: 'center', gap: 6,
-    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
-    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
-    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
-    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
-  };
-}
-
 export default function CalendarioPage() {
   const sesion = useSesion();
   const [confirm, ConfirmUI] = useConfirm();
@@ -59,7 +48,7 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     cargar();
-    const interval = setInterval(cargar, 15000);
+    const interval = setInterval(cargar, 60000);
     return () => clearInterval(interval);
   }, [cargar]);
 
@@ -81,6 +70,15 @@ export default function CalendarioPage() {
   const siguiente = proximos[0];
   const resto = proximos.slice(1);
 
+  const pillStyle = (active) => ({
+    flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex', position: 'relative',
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+    border: `1px solid ${active ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`,
+    background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
+    color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
+    fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
+  });
+
   return (
     <Layout sesion={sesion}>
       {ConfirmUI}
@@ -95,10 +93,10 @@ export default function CalendarioPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          <button onClick={() => setVista('calendario')} style={tabPillStyle(vista === 'calendario')}>
+          <button onClick={() => setVista('calendario')} style={pillStyle(vista === 'calendario')}>
             <Calendar size={14} /> Calendario
           </button>
-          <button onClick={() => setVista('gradacar')} style={tabPillStyle(vista === 'gradacar')}>
+          <button onClick={() => setVista('gradacar')} style={pillStyle(vista === 'gradacar')}>
             <Car size={14} /> GradaCar
             {pendientesGradaCar > 0 && (
               <span style={{
