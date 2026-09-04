@@ -221,7 +221,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
     supabase.rpc('contar_socios_aprobados').then(({ data }) => setTotalSocios(data));
   }, []);
 
-  const handleTocarEscudo = () => {
+  const handleTocarFoto = () => {
     const ahora = Date.now();
     toquesRef.current = [...toquesRef.current, ahora].filter((t) => ahora - t < 2000);
     if (toquesRef.current.length >= 5) {
@@ -243,13 +243,10 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
 
   return (
     <div style={{ padding: '18px 18px 30px', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
-      <div
-        onClick={handleTocarEscudo}
-        style={{
-          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: 420, height: 420, opacity: ultra ? 0.1 : 0.06, pointerEvents: 'auto', zIndex: 0, cursor: 'default',
-        }}
-      >
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        width: 420, height: 420, opacity: ultra ? 0.1 : 0.06, pointerEvents: 'none', zIndex: 0,
+      }}>
         <img src={ultra ? '/esqueleto.png' : '/escudo.png'} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
       </div>
 
@@ -267,11 +264,14 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
 
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div style={{ ...authCardStyle, textAlign: 'center', marginBottom: 18 }}>
-          <div style={{
-            width: 74, height: 74, borderRadius: '50%', margin: '0 auto 14px', overflow: 'hidden',
-            border: `2px solid ${PALETTE.brass}`, background: 'rgba(255,255,255,0.06)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          <div
+            onClick={handleTocarFoto}
+            style={{
+              width: 74, height: 74, borderRadius: '50%', margin: '0 auto 14px', overflow: 'hidden',
+              border: `2px solid ${PALETTE.brass}`, background: 'rgba(255,255,255,0.06)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+          >
             {carnet?.foto ? <img src={carnet.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src="/escudo.png" alt="" style={{ width: '65%', height: '65%', objectFit: 'contain', opacity: 0.6 }} />}
           </div>
           <div style={{ fontFamily: fontStack.label, fontSize: 12.5, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 4 }}>
@@ -291,7 +291,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
           )}
           {ultra && (
             <div style={{ marginTop: 10, fontSize: 11, color: 'rgba(244,246,241,0.4)', fontFamily: fontStack.label }}>
-              💀 Modo ultra activo · toca 5 veces el fondo para desactivarlo
+              💀 Modo ultra activo · toca 5 veces tu foto para desactivarlo
             </div>
           )}
         </div>
