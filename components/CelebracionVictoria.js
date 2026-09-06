@@ -7,7 +7,7 @@ function crearConfeti(w, h) {
     x: Math.random() * w,
     y: -20 - Math.random() * h * 0.5,
     tam: 6 + Math.random() * 6,
-    velY: 2 + Math.random() * 3,
+    velY: 1.6 + Math.random() * 2.2,
     velX: (Math.random() - 0.5) * 2,
     rot: Math.random() * 360,
     velRot: (Math.random() - 0.5) * 8,
@@ -20,12 +20,14 @@ function crearGlobos(w, h, escudo) {
     x: (w / 7) * (i + 1) + (Math.random() - 0.5) * 40,
     y: h + 80 + Math.random() * 200,
     tam: 46 + Math.random() * 18,
-    velY: 1.1 + Math.random() * 0.8,
+    velY: 2.0 + Math.random() * 1.2,
     oscilarBase: Math.random() * Math.PI * 2,
     oscilarVel: 0.02 + Math.random() * 0.015,
     escudo,
   }));
 }
+
+const MAX_FRAMES = 720; // ~12 segundos de red de seguridad
 
 export function CelebracionVictoria({ onFin }) {
   const canvasRef = useRef(null);
@@ -65,7 +67,7 @@ export function CelebracionVictoria({ onFin }) {
         ctx.restore();
       });
       confeti = confeti.filter((c) => c.y < h + 30);
-      if (frame < 90) confeti.push(...crearConfeti(w, 0).slice(0, 4));
+      if (frame < 150 && frame % 4 === 0) confeti.push(...crearConfeti(w, 0).slice(0, 10));
 
       globos.forEach((g) => {
         g.y -= g.velY;
@@ -88,9 +90,10 @@ export function CelebracionVictoria({ onFin }) {
           ctx.stroke();
         }
       });
-      globos = globos.filter((g) => g.y > -80);
+      globos = globos.filter((g) => g.y > -g.tam - 60);
 
-      if (frame < 260 && (confeti.length > 0 || globos.length > 0)) {
+      const quedaAlgo = confeti.length > 0 || globos.length > 0;
+      if (quedaAlgo && frame < MAX_FRAMES) {
         animId = requestAnimationFrame(dibujar);
       } else {
         setVisible(false);
