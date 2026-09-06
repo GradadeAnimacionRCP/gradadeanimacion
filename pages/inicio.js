@@ -113,7 +113,7 @@ function BloqueResultadoYRacha({ jugados }) {
           {info.texto}
         </div>
       </div>
-      {racha && racha.racha > 1 && (
+            {racha && racha.racha > 1 && (
         <div style={{
           fontFamily: fontStack.label, fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap',
           color: racha.ganando ? '#4ADE80' : '#ff6b6b',
@@ -122,6 +122,7 @@ function BloqueResultadoYRacha({ jugados }) {
         </div>
       )}
     </div>
+    </Link>
   );
 }
 
