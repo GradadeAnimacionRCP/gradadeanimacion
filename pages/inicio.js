@@ -97,7 +97,8 @@ function BloqueResultadoYRacha({ jugados }) {
   const racha = calcularRacha(jugados);
 
   return (
-    <div style={{ ...authCardStyle, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 14 }}>
+    <Link href="/calendario#ultimo-partido" style={{ textDecoration: 'none' }}>
+    <div style={{ ...authCardStyle, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
       <div style={{
         width: 50, height: 50, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: `${info.color}22`, border: `2px solid ${info.color}`,
