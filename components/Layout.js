@@ -135,14 +135,14 @@ export function Layout({ sesion, children }) {
       paddingTop: 'env(safe-area-inset-top, 0px)',
     }}>
       {partidoHoy && (
-        <div style={{
-          background: 'linear-gradient(90deg, rgba(201,162,75,0.2), rgba(200,30,44,0.25), rgba(201,162,75,0.2))',
+        <div className="gda-dia-partido-banner" style={{
+          background: 'linear-gradient(90deg, rgba(201,162,75,0.25), rgba(200,30,44,0.3), rgba(201,162,75,0.25), rgba(200,30,44,0.3))',
           borderBottom: `1px solid ${PALETTE.brass}`,
           color: PALETTE.chalk, fontSize: 12.5, textAlign: 'center', padding: '9px 14px',
           fontFamily: fontStack.label, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
           <Trophy size={15} color={PALETTE.brass} />
-          ¡Hoy juega el Racing! {partidoHoy.es_local ? 'vs' : 'en'} {partidoHoy.rival}{partidoHoy.hora ? ` · ${partidoHoy.hora.slice(0, 5)}` : ''}
+          ¡Hoy juega el Racing! vs {partidoHoy.rival}{partidoHoy.hora ? ` · ${partidoHoy.hora.slice(0, 5)}` : ''}
         </div>
       )}
       {avisoTemporal && (
@@ -184,10 +184,10 @@ export function Layout({ sesion, children }) {
           </div>
         )}
       </div>
-      <nav style={{
+      <nav className={partidoHoy ? 'gda-nav-dia-partido' : ''} style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex',
         background: 'rgba(7,40,28,0.92)', backdropFilter: 'blur(10px)',
-        borderTop: '1px solid rgba(201,162,75,0.25)', paddingBottom: 'env(safe-area-inset-bottom, 8px)', zIndex: 30,
+        borderTop: `1px solid ${partidoHoy ? PALETTE.brass : 'rgba(201,162,75,0.25)'}`, paddingBottom: 'env(safe-area-inset-bottom, 8px)', zIndex: 30,
       }}>
         {tabs.map((t) => {
           const Icon = t.icon;
