@@ -103,7 +103,7 @@ export default async function handler(req, res) {
       const yaConfirmoAlguno = misSociosDeEstaCuenta.some((s) => idsAsistentesSet.has(s.id));
       if (yaConfirmoAlguno) continue;
 
-      const rivalTexto = partido.es_local ? `vs ${partido.rival}` : `en ${partido.rival}`;
+      const rivalTexto = `vs ${partido.rival}`;
       const payload = JSON.stringify({
         title: '📣 ¿Vas al próximo partido?',
         body: `${totalAsistentes} ${totalAsistentes === 1 ? 'socio va' : 'socios van'} al partido ${rivalTexto}. Confirma asistencia.`,
@@ -126,7 +126,7 @@ export default async function handler(req, res) {
   let avisoDiaPartido = 0;
   if (partidoHoy) {
     const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
-    const rivalTexto = partidoHoy.es_local ? `vs ${partidoHoy.rival}` : `en ${partidoHoy.rival}`;
+    const rivalTexto = `vs ${partidoHoy.rival}`;
     const payload = JSON.stringify({
       title: '🏆 ¡Hoy es día de Racing!',
       body: `La app también se viste de gala. Partido ${rivalTexto}${partidoHoy.hora ? ` a las ${partidoHoy.hora.slice(0, 5)}` : ''}.`,
