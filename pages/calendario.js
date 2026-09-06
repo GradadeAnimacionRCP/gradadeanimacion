@@ -6,11 +6,13 @@ import { LoadingCrest } from '../components/LoadingCrest';
 import { AsistenciaPartido } from '../components/AsistenciaPartido';
 import { GradaCarPanel } from '../components/GradaCarPanel';
 import { PrediccionPartido } from '../components/PrediccionPartido';
-import { RankingPredicciones } from '../components/RankingPredicciones';
+import { ListaRankingPredicciones } from '../components/RankingPredicciones';
+import { ListaRankingMVP } from '../components/RankingMVP';
+import { VotacionMVP } from '../components/VotacionMVP';
 import { MarcadorEnVivo } from '../components/MarcadorEnVivo';
 import { PALETTE, fontStack } from '../styles/tema';
 import { PartidoCard, partidoEsPasado, formatFechaPartido, IconoLocalizacion } from '../components/PartidoCard';
-import { Calendar, ChevronDown, Car, Trophy } from 'lucide-react';
+import { Calendar, ChevronDown, Car, Trophy, Target, Star } from 'lucide-react';
 
 function PartidoResumen({ partido }) {
   const titulo = partido.es_local ? `vs ${partido.rival}` : `vs ${partido.rival} (fuera)`;
@@ -37,13 +39,14 @@ function PartidoResumen({ partido }) {
 const TITULOS = {
   calendario: { titulo: 'CALENDARIO', sub: 'Partidos en casa y fuera de la temporada' },
   gradacar: { titulo: 'GRADACAR', sub: 'Comparte coche con la grada para el próximo partido' },
-  ranking: { titulo: 'RANKING', sub: 'Quién más acierta los resultados de la temporada' },
+  ranking: { titulo: 'RANKING', sub: 'Predicciones y MVP de la temporada' },
 };
 
 export default function CalendarioPage() {
   const sesion = useSesion();
   const [confirm, ConfirmUI] = useConfirm();
   const [vista, setVista] = useState('calendario');
+  const [subVistaRanking, setSubVistaRanking] = useState('predicciones');
   const [partidos, setPartidos] = useState(undefined);
   const [misSocios, setMisSocios] = useState([]);
   const [expandido, setExpandido] = useState(null);
@@ -78,6 +81,7 @@ export default function CalendarioPage() {
   const jugados = (partidos || []).filter((p) => partidoEsPasado(p)).reverse();
   const siguiente = proximos[0];
   const resto = proximos.slice(1);
+  const ultimoJugado = jugados[0];
 
   const pillStyle = (active) => ({
     flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex', position: 'relative',
@@ -86,6 +90,15 @@ export default function CalendarioPage() {
     background: active ? 'rgba(200,30,44,0.18)' : 'rgba(255,255,255,0.04)',
     color: active ? PALETTE.chalk : 'rgba(244,246,241,0.65)',
     fontFamily: fontStack.label, fontWeight: 700, fontSize: 13,
+  });
+
+  const subPillStyle = (active) => ({
+    flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', gap: 5,
+    border: `1px solid ${active ? PALETTE.brass : 'rgba(244,246,241,0.15)'}`,
+    background: active ? 'rgba(201,162,75,0.15)' : 'transparent',
+    color: active ? PALETTE.brass : 'rgba(244,246,241,0.55)',
+    fontFamily: fontStack.label, fontWeight: 700, fontSize: 12,
   });
 
   return (
@@ -168,6 +181,16 @@ export default function CalendarioPage() {
                   </div>
                 </div>
               )}
+
+              {ultimoJugado && (
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>
+                    Último partido
+                  </div>
+                  <PartidoCard partido={ultimoJugado} />
+                  <VotacionMVP partido={ultimoJugado} sesion={sesion} />
+                </div>
+              )}
             </>
           )
         )}
@@ -189,7 +212,7 @@ export default function CalendarioPage() {
             </button>
             {verJugados && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {jugados.map((p) => <PartidoCard key={p.id} partido={p} />)}
+                {jugados.slice(1).map((p) => <PartidoCard key={p.id} partido={p} />)}
               </div>
             )}
           </div>
@@ -218,7 +241,19 @@ export default function CalendarioPage() {
           )
         )}
 
-        {vista === 'ranking' && <RankingPredicciones />}
+        {vista === 'ranking' && (
+          <div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+              <button onClick={() => setSubVistaRanking('predicciones')} style={subPillStyle(subVistaRanking === 'predicciones')}>
+                <Target size={13} /> Predicciones
+              </button>
+              <button onClick={() => setSubVistaRanking('mvp')} style={subPillStyle(subVistaRanking === 'mvp')}>
+                <Star size={13} /> MVP
+              </button>
+            </div>
+            {subVistaRanking === 'predicciones' ? <ListaRankingPredicciones /> : <ListaRankingMVP />}
+          </div>
+        )}
       </div>
     </Layout>
   );
