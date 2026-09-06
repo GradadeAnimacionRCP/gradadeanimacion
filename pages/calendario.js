@@ -182,13 +182,15 @@ export default function CalendarioPage() {
                 </div>
               )}
 
-                            {ultimoJugado && (
-                <div id="ultimo-partido" style={{ marginBottom: 22, scrollMarginTop: 20 }}>
-                  <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>
+              {ultimoJugado && (
+                <div style={{ marginBottom: 22 }}>
+                  <div id="ultimo-partido" style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center', scrollMarginTop: 20 }}>
                     Último partido
                   </div>
-                  <PartidoCard partido={ultimoJugado} />
                   <VotacionMVP partido={ultimoJugado} sesion={sesion} />
+                  <div style={{ marginTop: 12 }}>
+                    <PartidoCard partido={ultimoJugado} />
+                  </div>
                 </div>
               )}
             </>
