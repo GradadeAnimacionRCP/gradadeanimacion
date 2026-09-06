@@ -54,8 +54,8 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
     avisarTodos({ title: '▶️ ¡Empieza la segunda parte!', body: `${nombreLocal} ${local} - ${visitante} ${nombreVisitante}.` });
   };
 
-  const handleFinalizar = async () => {
-    await actualizar({ en_directo: false, estado_directo: 'finalizado', resultado: `${local}-${visitante}` });
+    const handleFinalizar = async () => {
+    await actualizar({ en_directo: false, estado_directo: 'finalizado', resultado: `${local}-${visitante}`, finalizado_en: new Date().toISOString() });
     avisarTodos({ title: '🏁 Final del partido', body: `${nombreLocal} ${local} - ${visitante} ${nombreVisitante}.` });
   };
 
