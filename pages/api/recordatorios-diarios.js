@@ -143,7 +143,188 @@ export default async function handler(req, res) {
       }
     }
   }
+  // ---------- 4. Aviso "vota ya" (1 día antes de que cierre la votación de MVP) ----------
+  let avisoVotaYa = 0;
+  const { data: partidosPendientesVoto } = await supabaseAdmin
+    .from('partidos')
+    .select('id, rival, finalizado_en, fecha, aviso_mvp_enviado')
+    .not('resultado', 'is', null)
+    .eq('aviso_mvp_enviado', false);
 
+  for (const p of partidosPendientesVoto || []) {
+    const inicio = p.finalizado_en ? new Date(p.finalizado_en) : new Date(`${p.fecha}T00:00:00`);
+    const cierre = new Date(inicio.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const horasHastaCierre = (cierre.getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (horasHastaCierre > 0 && horasHastaCierre <= 24) {
+      const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+      const payload = JSON.stringify({
+        title: '🗳️ ¡Vota ya al MVP!',
+        body: `Queda menos de un día para que cierre la votación del partido vs ${p.rival}.`,
+        url: '/calendario',
+      });
+      for (const s of todasSuscripciones || []) {
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+          avisoVotaYa++;
+        } catch (err) {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
+          }
+        }
+      }
+      await supabaseAdmin.from('partidos').update({ aviso_mvp_enviado: true }).eq('id', p.id);
+    }
+  }
+
+  // ---------- 5. Cerrar votaciones de MVP vencidas y avisar del ganador ----------
+  let avisoMvpGanador = 0;
+  const { data: cerradas } = await supabaseAdmin.rpc('admin_cerrar_mvp_pendientes');
+
+  for (const c of cerradas || []) {
+    const ganadores = (c.ganadores || []).filter((g) => g.puesto === 1);
+    if (ganadores.length === 0) continue;
+    const nombres = ganadores.map((g) => g.nombre).join(', ');
+    const payload = JSON.stringify({
+      title: '🏅 ¡Ya tenemos MVP!',
+      body: `${nombres} ha sido elegido MVP del partido vs ${c.rival} (${ganadores[0].votos} votos).`,
+      url: '/calendario',
+    });
+    const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+    for (const s of todasSuscripciones || []) {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        avisoMvpGanador++;
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
+        }
+      }
+    }
+  }
+  // ---------- 4. Aviso "vota ya" (1 día antes de que cierre la votación de MVP) ----------
+  let avisoVotaYa = 0;
+  const { data: partidosPendientesVoto } = await supabaseAdmin
+    .from('partidos')
+    .select('id, rival, finalizado_en, fecha, aviso_mvp_enviado')
+    .not('resultado', 'is', null)
+    .eq('aviso_mvp_enviado', false);
+
+  for (const p of partidosPendientesVoto || []) {
+    const inicio = p.finalizado_en ? new Date(p.finalizado_en) : new Date(`${p.fecha}T00:00:00`);
+    const cierre = new Date(inicio.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const horasHastaCierre = (cierre.getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (horasHastaCierre > 0 && horasHastaCierre <= 24) {
+      const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+      const payload = JSON.stringify({
+        title: '🗳️ ¡Vota ya al MVP!',
+        body: `Queda menos de un día para que cierre la votación del partido vs ${p.rival}.`,
+        url: '/calendario',
+      });
+      for (const s of todasSuscripciones || []) {
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+          avisoVotaYa++;
+        } catch (err) {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
+          }
+        }
+      }
+      await supabaseAdmin.from('partidos').update({ aviso_mvp_enviado: true }).eq('id', p.id);
+    }
+  }
+
+  // ---------- 5. Cerrar votaciones de MVP vencidas y avisar del ganador ----------
+  let avisoMvpGanador = 0;
+  const { data: cerradas } = await supabaseAdmin.rpc('admin_cerrar_mvp_pendientes');
+
+  for (const c of cerradas || []) {
+    const ganadores = (c.ganadores || []).filter((g) => g.puesto === 1);
+    if (ganadores.length === 0) continue;
+    const nombres = ganadores.map((g) => g.nombre).join(', ');
+    const payload = JSON.stringify({
+      title: '🏅 ¡Ya tenemos MVP!',
+      body: `${nombres} ha sido elegido MVP del partido vs ${c.rival} (${ganadores[0].votos} votos).`,
+      url: '/calendario',
+    });
+    const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+    for (const s of todasSuscripciones || []) {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        avisoMvpGanador++;
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
+        }
+      }
+    }
+  }
+ // ---------- 4. Aviso "vota ya" (1 día antes de que cierre la votación de MVP) ----------
+  let avisoVotaYa = 0;
+  const { data: partidosPendientesVoto } = await supabaseAdmin
+    .from('partidos')
+    .select('id, rival, finalizado_en, fecha, aviso_mvp_enviado')
+    .not('resultado', 'is', null)
+    .eq('aviso_mvp_enviado', false);
+
+  for (const p of partidosPendientesVoto || []) {
+    const inicio = p.finalizado_en ? new Date(p.finalizado_en) : new Date(`${p.fecha}T00:00:00`);
+    const cierre = new Date(inicio.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const horasHastaCierre = (cierre.getTime() - Date.now()) / (1000 * 60 * 60);
+
+    if (horasHastaCierre > 0 && horasHastaCierre <= 24) {
+      const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+      const payload = JSON.stringify({
+        title: '🗳️ ¡Vota ya al MVP!',
+        body: `Queda menos de un día para que cierre la votación del partido vs ${p.rival}.`,
+        url: '/calendario',
+      });
+      for (const s of todasSuscripciones || []) {
+        try {
+          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+          avisoVotaYa++;
+        } catch (err) {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
+          }
+        }
+      }
+      await supabaseAdmin.from('partidos').update({ aviso_mvp_enviado: true }).eq('id', p.id);
+    }
+  }
+
+  // ---------- 5. Cerrar votaciones de MVP vencidas y avisar del ganador ----------
+  let avisoMvpGanador = 0;
+  const { data: cerradas } = await supabaseAdmin.rpc('admin_cerrar_mvp_pendientes');
+
+  for (const c of cerradas || []) {
+    const ganadores = (c.ganadores || []).filter((g) => g.puesto === 1);
+    if (ganadores.length === 0) continue;
+    const nombres = ganadores.map((g) => g.nombre).join(', ');
+    const payload = JSON.stringify({
+      title: '🏅 ¡Ya tenemos MVP!',
+      body: `${nombres} ha sido elegido MVP del partido vs ${c.rival} (${ganadores[0].votos} votos).`,
+      url: '/calendario',
+    });
+    const { data: todasSuscripciones } = await supabaseAdmin.rpc('obtener_todas_las_suscripciones');
+    for (const s of todasSuscripciones || []) {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
+        avisoMvpGanador++;
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await supabaseAdmin.from('push_subscripciones').delete().eq('endpoint', s.endpoint);
+        }
+      }
+    }
+  }
+
+  console.log(`[recordatorios] Renovaciones: ${avisosCaducados} avisos. Asistencia: ${avisosAsistencia} avisos. Día de partido: ${avisoDiaPartido} avisos. Vota ya: ${avisoVotaYa} avisos. MVP ganador: ${avisoMvpGanador} avisos.`);
+  res.status(200).json({ avisosCaducados, avisosAsistencia, avisoDiaPartido, avisoVotaYa, avisoMvpGanador, partidoEncontrado: !!partido });
+}
+  
   console.log(`[recordatorios] Renovaciones: ${avisosCaducados} avisos. Asistencia: ${avisosAsistencia} avisos. Día de partido: ${avisoDiaPartido} avisos.`);
   res.status(200).json({ avisosCaducados, avisosAsistencia, avisoDiaPartido, partidoEncontrado: !!partido });
 }
