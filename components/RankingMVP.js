@@ -80,6 +80,7 @@ export function ListaRankingMVP() {
           <span style={{ fontSize: 13, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700 }}>{r.puntos} pts</span>
         </div>
       ))}
+      </div>
     </div>
   );
 }
