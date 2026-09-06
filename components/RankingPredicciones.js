@@ -36,7 +36,7 @@ export function RankingPredicciones() {
           <span style={{ width: 26, textAlign: 'center', fontSize: idx < 3 ? 18 : 13, fontFamily: fontStack.heading, fontWeight: 700, color: idx < 3 ? PALETTE.brass : 'rgba(244,246,241,0.5)' }}>
             {idx < 3 ? MEDALLAS[idx] : idx + 1}
           </span>
-          <span style={{ flex: 1, fontSize: 13.5, color: PALETTE.chalk, fontFamily: fontStack.body }}>{r.usuario}</span>
+          <span style={{ flex: 1, fontSize: 13.5, color: PALETTE.chalk, fontFamily: fontStack.body }}>{r.nombre_mostrar}</span>
           <span style={{ fontSize: 13, color: PALETTE.brass, fontFamily: fontStack.label, fontWeight: 700 }}>
             {r.aciertos} {r.aciertos === 1 ? 'acierto' : 'aciertos'}
           </span>
