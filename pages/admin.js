@@ -498,7 +498,7 @@ export default function Admin() {
                       <Trash2 size={15} style={{ margin: '0 auto' }} />
                     </button>
                   </div>
-                  {!p.resultado && <PanelDirecto partido={p} onCambio={cargarPartidos} />}
+                    {!p.resultado && <PanelDirecto partido={p} adminId={sesion.id} onCambio={cargarPartidos} />}
                 </div>
               ))}
             </div>
