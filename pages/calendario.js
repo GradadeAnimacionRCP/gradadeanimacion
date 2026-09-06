@@ -7,6 +7,7 @@ import { AsistenciaPartido } from '../components/AsistenciaPartido';
 import { GradaCarPanel } from '../components/GradaCarPanel';
 import { PrediccionPartido } from '../components/PrediccionPartido';
 import { RankingPredicciones } from '../components/RankingPredicciones';
+import { MarcadorEnVivo } from '../components/MarcadorEnVivo';
 import { PALETTE, fontStack } from '../styles/tema';
 import { PartidoCard, partidoEsPasado, formatFechaPartido, IconoLocalizacion } from '../components/PartidoCard';
 import { Calendar, ChevronDown, Car, Trophy } from 'lucide-react';
@@ -134,6 +135,7 @@ export default function CalendarioPage() {
                 Próximo partido
               </div>
               <div style={{ marginBottom: 22 }}>
+                <MarcadorEnVivo partido={siguiente} />
                 <PartidoCard partido={siguiente} destacado />
                 <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
                 <PrediccionPartido partido={siguiente} sesion={sesion} />
