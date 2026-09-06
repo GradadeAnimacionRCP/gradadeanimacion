@@ -7,9 +7,11 @@ const MEDALLAS = ['🥇', '🥈', '🥉'];
 
 export function ListaRankingMVP() {
   const [ranking, setRanking] = useState(undefined);
+  const [historial, setHistorial] = useState(undefined);
 
   useEffect(() => {
     supabase.rpc('ranking_mvp').then(({ data }) => setRanking(data || []));
+    supabase.rpc('mvp_historial_jornadas').then(({ data }) => setHistorial(data || []));
   }, []);
 
   if (ranking === undefined) {
