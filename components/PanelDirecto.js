@@ -31,9 +31,16 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
   const nombreLocal = partido.es_local ? 'Racing' : partido.rival;
   const nombreVisitante = partido.es_local ? partido.rival : 'Racing';
 
-  const handleIniciar = async () => {
+    const handleIniciar = async () => {
     await actualizar({ en_directo: true, estado_directo: 'primera', marcador_en_vivo: '0 - 0', minuto_en_vivo: "1" });
     await supabase.rpc('admin_limpiar_gradacar', { p_admin_id: adminId, p_partido_id: partido.id });
+
+    const { data: anteriores } = await supabase
+      .from('partidos').select('id').not('resultado', 'is', null).lt('fecha', partido.fecha);
+    for (const p of anteriores || []) {
+      await supabase.rpc('cerrar_votacion_mvp', { p_partido_id: p.id });
+    }
+
     avisarTodos({ title: '⚽ ¡Arranca el partido!', body: `Comienza ${nombreLocal} vs ${nombreVisitante}. ¡Vamos Racing!` });
   };
 
