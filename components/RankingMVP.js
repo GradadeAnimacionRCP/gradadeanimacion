@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack } from '../styles/tema';
-import { Star } from 'lucide-react';
+import { Star, Trophy } from 'lucide-react';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
