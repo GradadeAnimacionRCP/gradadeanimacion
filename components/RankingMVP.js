@@ -18,7 +18,7 @@ export function ListaRankingMVP() {
     return <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.5)' }}>Cargando...</div>;
   }
 
-  if (ranking.length === 0) {
+    if (ranking.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)' }}>
         <Star size={28} style={{ opacity: 0.4, marginBottom: 8 }} />
@@ -28,7 +28,38 @@ export function ListaRankingMVP() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div>
+      {historial && historial.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+          {historial.map((h) => {
+            const puestos = { 1: [], 2: [], 3: [] };
+            (h.ganadores || []).forEach((g) => { if (puestos[g.puesto]) puestos[g.puesto].push(g); });
+            const etiquetaPuesto = { 1: '🥇 Primer puesto', 2: '🥈 Segundo puesto', 3: '🥉 Tercer puesto' };
+            return (
+              <div key={h.partido_id} style={{ background: 'rgba(201,162,75,0.08)', border: '1px solid rgba(201,162,75,0.3)', borderRadius: 14, padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, fontWeight: 800, textTransform: 'uppercase' }}>
+                  <Trophy size={14} /> {h.jornada ? `Jornada ${h.jornada}` : 'MVP'} · vs {h.rival}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[1, 2, 3].map((p) =>
+                    puestos[p].length > 0 && (
+                      <div key={p} style={{ fontSize: 13, color: PALETTE.chalk, fontFamily: fontStack.body }}>
+                        <span style={{ fontWeight: 700 }}>{etiquetaPuesto[p]}:</span>{' '}
+                        {puestos[p].map((g) => g.nombre).join(' / ')} — {puestos[p][0].puntos} {puestos[p][0].puntos === 1 ? 'punto' : 'puntos'}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>
+        Clasificación acumulada
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {ranking.map((r, idx) => (
         <div key={r.jugador_id} style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12,
