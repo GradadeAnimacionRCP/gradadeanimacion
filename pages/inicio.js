@@ -15,6 +15,7 @@ import { CompartirCarnet } from '../components/CompartirCarnet';
 import { CelebracionVictoria } from '../components/CelebracionVictoria';
 import { yaVistaCelebracion, marcarCelebracionVista } from '../lib/celebracion';
 import { modoUltraActivo, activarModoUltra, desactivarModoUltra } from '../lib/modoUltra';
+import { MarcadorEnVivo } from '../components/MarcadorEnVivo';
 
 const NOMBRE_REGEX = /^[A-Za-zÀ-ÿ\s'-]{2,}$/;
 
@@ -310,6 +311,7 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
             <div style={{ textAlign: 'center', color: 'rgba(244,246,241,0.5)', fontSize: 13 }}>Cargando...</div>
           ) : proximoPartido ? (
             <>
+              {proximoPartido.en_directo && <div style={{ marginBottom: 12 }}><MarcadorEnVivo partido={proximoPartido} /></div>}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <EscudoMini src={escudoLocal} />
