@@ -182,8 +182,8 @@ export default function CalendarioPage() {
                 </div>
               )}
 
-              {ultimoJugado && (
-                <div style={{ marginBottom: 22 }}>
+                            {ultimoJugado && (
+                <div id="ultimo-partido" style={{ marginBottom: 22, scrollMarginTop: 20 }}>
                   <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>
                     Último partido
                   </div>
