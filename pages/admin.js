@@ -12,6 +12,7 @@ import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from '../components/UI';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
 import { formatFechaPartido } from '../components/PartidoCard';
+import { PanelDirecto } from '../components/PanelDirecto';
 import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle } from 'lucide-react';
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
@@ -241,8 +242,9 @@ export default function Admin() {
     const numero = parseInt(verifyId.trim().toUpperCase().replace('GDA-', ''), 10);
     const { data } = await supabase.rpc('buscar_socio', { p_numero: numero, p_apellidos: '' });
     setVerifyResult(data && data[0] ? data[0] : 'not-found');
-  };  
-return (
+  };
+
+  return (
     <Layout sesion={sesion}>
       {ConfirmUI}
       <div style={{ padding: '16px 14px 50px' }}>
@@ -479,21 +481,24 @@ return (
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {(partidos || []).map((p) => (
-                <div key={p.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 160 }}>
-                    <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{p.es_local ? '🏠' : '✈️'} vs {p.rival}</div>
-                    <div style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
-                      {formatFechaPartido(p.fecha, p.hora)}{p.jornada ? ` · Jornada ${p.jornada}` : ''}{p.resultado ? ` · ${p.resultado}` : ''}
+                <div key={p.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 160 }}>
+                      <div style={{ color: PALETTE.chalk, fontWeight: 600, fontSize: 14.5 }}>{p.es_local ? '🏠' : '✈️'} vs {p.rival}</div>
+                      <div style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label }}>
+                        {formatFechaPartido(p.fecha, p.hora)}{p.jornada ? ` · Jornada ${p.jornada}` : ''}{p.resultado ? ` · ${p.resultado}` : ''}
+                      </div>
                     </div>
+                    <button onClick={() => setEditandoPartido(p)} title="Editar"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
+                      <Pencil size={15} style={{ margin: '0 auto' }} />
+                    </button>
+                    <button onClick={() => handleEliminarPartido(p)} title="Eliminar"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
+                      <Trash2 size={15} style={{ margin: '0 auto' }} />
+                    </button>
                   </div>
-                  <button onClick={() => setEditandoPartido(p)} title="Editar"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: PALETTE.chalk, cursor: 'pointer' }}>
-                    <Pencil size={15} style={{ margin: '0 auto' }} />
-                  </button>
-                  <button onClick={() => handleEliminarPartido(p)} title="Eliminar"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(244,246,241,0.15)', borderRadius: 8, width: 32, height: 32, color: '#ff8a8a', cursor: 'pointer' }}>
-                    <Trash2 size={15} style={{ margin: '0 auto' }} />
-                  </button>
+                  {!p.resultado && <PanelDirecto partido={p} onCambio={cargarPartidos} />}
                 </div>
               ))}
             </div>
