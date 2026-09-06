@@ -5,7 +5,7 @@ import { Trophy } from 'lucide-react';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
-export function RankingPredicciones() {
+export function ListaRankingPredicciones() {
   const [ranking, setRanking] = useState(undefined);
 
   useEffect(() => {
