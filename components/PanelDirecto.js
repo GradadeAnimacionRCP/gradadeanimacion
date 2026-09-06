@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from './UI';
-import { Play, Pause, Flag, Plus, Minus, Radio, Square } from 'lucide-react';
+import { Play, Pause, Flag, Plus, Minus, Radio } from 'lucide-react';
 
 async function avisarTodos({ title, body }) {
   fetch('/api/send-push', {
@@ -16,7 +16,7 @@ function parsearMarcador(texto) {
   return { local: isNaN(partes[0]) ? 0 : partes[0], visitante: isNaN(partes[1]) ? 0 : partes[1] };
 }
 
-export function PanelDirecto({ partido, onCambio }) {
+export function PanelDirecto({ partido, adminId, onCambio }) {
   const [minuto, setMinuto] = useState(partido.minuto_en_vivo || '');
   const [guardando, setGuardando] = useState(false);
   const { local, visitante } = parsearMarcador(partido.marcador_en_vivo);
@@ -33,6 +33,7 @@ export function PanelDirecto({ partido, onCambio }) {
 
   const handleIniciar = async () => {
     await actualizar({ en_directo: true, estado_directo: 'primera', marcador_en_vivo: '0 - 0', minuto_en_vivo: "1" });
+    await supabase.rpc('admin_limpiar_gradacar', { p_admin_id: adminId, p_partido_id: partido.id });
     avisarTodos({ title: '⚽ ¡Arranca el partido!', body: `Comienza ${nombreLocal} vs ${nombreVisitante}. ¡Vamos Racing!` });
   };
 
@@ -80,9 +81,14 @@ export function PanelDirecto({ partido, onCambio }) {
       </div>
 
       {!partido.en_directo ? (
-        <Button variant="primary" disabled={guardando} onClick={handleIniciar} style={{ width: '100%' }}>
-          <Play size={15} /> Iniciar partido en directo
-        </Button>
+        <div>
+          <p style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.5)', margin: '0 0 10px', lineHeight: 1.5 }}>
+            Al iniciar, se eliminarán los anuncios de GradaCar de este partido (ya no hará falta compartir coche).
+          </p>
+          <Button variant="primary" disabled={guardando} onClick={handleIniciar} style={{ width: '100%' }}>
+            <Play size={15} /> Iniciar partido en directo
+          </Button>
+        </div>
       ) : (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 14 }}>
