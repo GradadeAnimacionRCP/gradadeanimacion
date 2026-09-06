@@ -36,6 +36,13 @@ function PartidoResumen({ partido }) {
   );
 }
 
+function votacionMvpVisible(partido) {
+  if (!partido || !partido.resultado) return false;
+  const inicio = partido.finalizado_en ? new Date(partido.finalizado_en) : new Date(`${partido.fecha}T00:00:00`);
+  const cierre = new Date(inicio.getTime() + 2 * 24 * 60 * 60 * 1000);
+  return cierre.getTime() > Date.now();
+}
+
 const TITULOS = {
   calendario: { titulo: 'CALENDARIO', sub: 'Partidos en casa y fuera de la temporada' },
   gradacar: { titulo: 'GRADACAR', sub: 'Comparte coche con la grada para el próximo partido' },
@@ -82,6 +89,7 @@ export default function CalendarioPage() {
   const siguiente = proximos[0];
   const resto = proximos.slice(1);
   const ultimoJugado = jugados[0];
+  const mostrarVotacion = votacionMvpVisible(ultimoJugado);
 
   const pillStyle = (active) => ({
     flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', display: 'flex', position: 'relative',
@@ -137,61 +145,62 @@ export default function CalendarioPage() {
             <div style={{ padding: '20px 0', display: 'flex', justifyContent: 'center' }}>
               <LoadingCrest texto="Cargando partidos..." />
             </div>
-          ) : proximos.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)', marginBottom: 24 }}>
-              <Calendar size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
-              <p style={{ fontSize: 13.5 }}>Todavía no hay partidos programados.</p>
-            </div>
           ) : (
             <>
-              <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>
-                Próximo partido
-              </div>
-              <div style={{ marginBottom: 22 }}>
-                <MarcadorEnVivo partido={siguiente} />
-                <PartidoCard partido={siguiente} destacado />
-                <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
-                <PrediccionPartido partido={siguiente} sesion={sesion} />
-              </div>
-
-              {resto.length > 0 && (
-                <div style={{ marginBottom: 26 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {resto.map((p) => (
-                      <div key={p.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, overflow: 'hidden' }}>
-                        <button
-                          onClick={() => setExpandido(expandido === p.id ? null : p.id)}
-                          style={{
-                            width: '100%', background: 'none', border: 'none', padding: '2px 12px', cursor: 'pointer',
-                            display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                          }}
-                        >
-                          <PartidoResumen partido={p} />
-                          <ChevronDown size={18} color="rgba(244,246,241,0.5)" style={{ transform: expandido === p.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0, marginLeft: 8 }} />
-                        </button>
-                        {expandido === p.id && (
-                          <div style={{ padding: '0 10px 12px' }}>
-                            <PartidoCard partido={p} />
-                            <AsistenciaPartido partidoId={p.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
-                            <PrediccionPartido partido={p} sesion={sesion} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+              {mostrarVotacion && (
+                <div id="ultimo-partido" style={{ marginBottom: 26, scrollMarginTop: 20 }}>
+                  <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>
+                    Vota al MVP del último partido
                   </div>
+                  <VotacionMVP partido={ultimoJugado} sesion={sesion} />
                 </div>
               )}
 
-              {ultimoJugado && (
-                <div style={{ marginBottom: 22 }}>
-                  <div id="ultimo-partido" style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center', scrollMarginTop: 20 }}>
-                    Último partido
-                  </div>
-                  <VotacionMVP partido={ultimoJugado} sesion={sesion} />
-                  <div style={{ marginTop: 12 }}>
-                    <PartidoCard partido={ultimoJugado} />
-                  </div>
+              {proximos.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 20, color: 'rgba(244,246,241,0.55)', marginBottom: 24 }}>
+                  <Calendar size={30} style={{ opacity: 0.4, marginBottom: 8 }} />
+                  <p style={{ fontSize: 13.5 }}>Todavía no hay partidos programados.</p>
                 </div>
+              ) : (
+                <>
+                  <div style={{ fontFamily: fontStack.label, fontSize: 12, color: PALETTE.brass, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: 10, textAlign: 'center' }}>
+                    Próximo partido
+                  </div>
+                  <div style={{ marginBottom: 22 }}>
+                    <MarcadorEnVivo partido={siguiente} />
+                    <PartidoCard partido={siguiente} destacado />
+                    <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
+                    <PrediccionPartido partido={siguiente} sesion={sesion} />
+                  </div>
+
+                  {resto.length > 0 && (
+                    <div style={{ marginBottom: 26 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {resto.map((p) => (
+                          <div key={p.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(244,246,241,0.1)', borderRadius: 12, overflow: 'hidden' }}>
+                            <button
+                              onClick={() => setExpandido(expandido === p.id ? null : p.id)}
+                              style={{
+                                width: '100%', background: 'none', border: 'none', padding: '2px 12px', cursor: 'pointer',
+                                display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                              }}
+                            >
+                              <PartidoResumen partido={p} />
+                              <ChevronDown size={18} color="rgba(244,246,241,0.5)" style={{ transform: expandido === p.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0, marginLeft: 8 }} />
+                            </button>
+                            {expandido === p.id && (
+                              <div style={{ padding: '0 10px 12px' }}>
+                                <PartidoCard partido={p} />
+                                <AsistenciaPartido partidoId={p.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
+                                <PrediccionPartido partido={p} sesion={sesion} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )
@@ -214,7 +223,7 @@ export default function CalendarioPage() {
             </button>
             {verJugados && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {jugados.slice(1).map((p) => <PartidoCard key={p.id} partido={p} />)}
+                {jugados.map((p) => <PartidoCard key={p.id} partido={p} />)}
               </div>
             )}
           </div>
