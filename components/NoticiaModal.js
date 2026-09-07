@@ -5,7 +5,7 @@ import { Button, Field } from './UI';
 import { Camera, Trash2 } from 'lucide-react';
 
 function prepararImagen(file) {
-  const MAX_LADO = 1400;
+  const MAX_LADO = 1000;
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
@@ -18,7 +18,7 @@ function prepararImagen(file) {
         canvas.width = Math.round(img.width * escala);
         canvas.height = Math.round(img.height * escala);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
       img.src = reader.result;
     };
