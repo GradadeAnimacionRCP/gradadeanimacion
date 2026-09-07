@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from './UI';
@@ -16,10 +16,38 @@ function parsearMarcador(texto) {
   return { local: isNaN(partes[0]) ? 0 : partes[0], visitante: isNaN(partes[1]) ? 0 : partes[1] };
 }
 
+function calcularMinutoAutomatico(estado, iniciadoEn, base) {
+  if (!iniciadoEn) return null;
+  const segundos = Math.floor((Date.now() - new Date(iniciadoEn).getTime()) / 1000);
+  const minutos = Math.floor(segundos / 60);
+  const tope = estado === 'primera' ? 45 : 90;
+  const desde = base;
+  const minutoReal = desde + minutos;
+  if (minutoReal <= tope) return `${minutoReal}`;
+  return `${tope}+${minutoReal - tope}`;
+}
+
 export function PanelDirecto({ partido, adminId, onCambio }) {
-  const [minuto, setMinuto] = useState(partido.minuto_en_vivo || '');
+  const [minutoManual, setMinutoManual] = useState('');
+  const [minutoAuto, setMinutoAuto] = useState('');
+  const [usarManual, setUsarManual] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [confirmandoGol, setConfirmandoGol] = useState(null);
   const { local, visitante } = parsearMarcador(partido.marcador_en_vivo);
+  const tickRef = useRef(null);
+
+  useEffect(() => {
+    if (!partido.en_directo || usarManual) return;
+    const actualizarTick = () => {
+      const base = partido.estado_directo === 'segunda' ? 45 : 0;
+      const inicioTramo = partido.estado_directo === 'segunda' ? partido.inicio_segunda_en : partido.iniciado_en;
+      const calculado = calcularMinutoAutomatico(partido.estado_directo, inicioTramo, base);
+      if (calculado) setMinutoAuto(calculado);
+    };
+    actualizarTick();
+    tickRef.current = setInterval(actualizarTick, 15000);
+    return () => clearInterval(tickRef.current);
+  }, [partido.en_directo, partido.estado_directo, partido.iniciado_en, partido.inicio_segunda_en, usarManual]);
 
   const actualizar = async (campos) => {
     setGuardando(true);
@@ -31,8 +59,12 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
   const nombreLocal = partido.es_local ? 'Racing' : partido.rival;
   const nombreVisitante = partido.es_local ? partido.rival : 'Racing';
 
-    const handleIniciar = async () => {
-    await actualizar({ en_directo: true, estado_directo: 'primera', marcador_en_vivo: '0 - 0', minuto_en_vivo: "1" });
+  const handleIniciar = async () => {
+    const ahora = new Date().toISOString();
+    await actualizar({
+      en_directo: true, estado_directo: 'primera', marcador_en_vivo: '0 - 0',
+      minuto_en_vivo: '0', iniciado_en: ahora,
+    });
     await supabase.rpc('admin_limpiar_gradacar', { p_admin_id: adminId, p_partido_id: partido.id });
 
     const { data: anteriores } = await supabase
@@ -45,30 +77,36 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
   };
 
   const handleDescanso = async () => {
-    await actualizar({ estado_directo: 'descanso' });
+    await actualizar({ estado_directo: 'descanso', minuto_en_vivo: '45' });
     avisarTodos({ title: '⏸️ Descanso', body: `${nombreLocal} ${local} - ${visitante} ${nombreVisitante} al descanso.` });
   };
 
   const handleSegundaParte = async () => {
-    await actualizar({ estado_directo: 'segunda', minuto_en_vivo: "46" });
+    await actualizar({ estado_directo: 'segunda', minuto_en_vivo: '45', inicio_segunda_en: new Date().toISOString() });
     avisarTodos({ title: '▶️ ¡Empieza la segunda parte!', body: `${nombreLocal} ${local} - ${visitante} ${nombreVisitante}.` });
   };
 
-    const handleFinalizar = async () => {
+  const handleFinalizar = async () => {
     await actualizar({ en_directo: false, estado_directo: 'finalizado', resultado: `${local}-${visitante}`, finalizado_en: new Date().toISOString() });
     avisarTodos({ title: '🏁 Final del partido', body: `${nombreLocal} ${local} - ${visitante} ${nombreVisitante}.` });
   };
 
-  const handleGol = async (equipo) => {
+  const minutoMostrado = usarManual ? minutoManual : minutoAuto;
+
+  const ejecutarGol = async (equipo) => {
     const nuevoLocal = equipo === 'local' ? local + 1 : local;
     const nuevoVisitante = equipo === 'visitante' ? visitante + 1 : visitante;
     const marcadorNuevo = `${nuevoLocal} - ${nuevoVisitante}`;
-    await actualizar({ marcador_en_vivo: marcadorNuevo });
+    await actualizar({ marcador_en_vivo: marcadorNuevo, minuto_en_vivo: minutoMostrado });
     const esGolRacing = (equipo === 'local' && partido.es_local) || (equipo === 'visitante' && !partido.es_local);
     avisarTodos({
       title: esGolRacing ? '⚽🔴 ¡GOOOL DEL RACING!' : '⚽ Gol del rival',
-      body: `${nombreLocal} ${nuevoLocal} - ${nuevoVisitante} ${nombreVisitante}${minuto ? ` (min. ${minuto})` : ''}`,
+      body: `${nombreLocal} ${nuevoLocal} - ${nuevoVisitante} ${nombreVisitante}${minutoMostrado ? ` (min. ${minutoMostrado})` : ''}`,
     });
+  };
+
+  const handleGol = (equipo) => {
+    setConfirmandoGol(equipo);
   };
 
   const handleQuitarGol = async (equipo) => {
@@ -77,8 +115,13 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
     await actualizar({ marcador_en_vivo: `${nuevoLocal} - ${nuevoVisitante}` });
   };
 
-  const handleGuardarMinuto = () => {
-    actualizar({ minuto_en_vivo: minuto });
+  const handleGuardarMinutoManual = () => {
+    setUsarManual(true);
+    actualizar({ minuto_en_vivo: minutoManual });
+  };
+
+  const handleVolverAutomatico = () => {
+    setUsarManual(false);
   };
 
   return (
@@ -86,6 +129,31 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, color: PALETTE.stripe, fontFamily: fontStack.label, fontWeight: 800, fontSize: 12, textTransform: 'uppercase' }}>
         <Radio size={14} /> Control en directo
       </div>
+
+      {confirmandoGol && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 90,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        }} onClick={() => setConfirmandoGol(null)}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: PALETTE.pitchDark, border: `1px solid ${PALETTE.brass}`, borderRadius: 16,
+            padding: '22px 24px', textAlign: 'center', maxWidth: 320,
+          }}>
+            <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 15.5, color: PALETTE.chalk, marginBottom: 6 }}>
+              ¿Confirmar gol de {confirmandoGol === 'local' ? nombreLocal : nombreVisitante}?
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', marginBottom: 16 }}>
+              Se enviará una notificación push a todo el mundo.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="ghost" onClick={() => setConfirmandoGol(null)} style={{ flex: 1, fontSize: 13 }}>Cancelar</Button>
+              <Button variant="primary" onClick={() => { ejecutarGol(confirmandoGol); setConfirmandoGol(null); }} style={{ flex: 1, fontSize: 13 }}>
+                Sí, confirmar gol
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!partido.en_directo ? (
         <div>
@@ -98,6 +166,15 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
         </div>
       ) : (
         <div>
+          <div style={{ textAlign: 'center', marginBottom: 10 }}>
+            <span style={{
+              display: 'inline-block', background: 'rgba(201,162,75,0.15)', border: `1px solid ${PALETTE.brass}55`,
+              borderRadius: 999, padding: '4px 14px', fontFamily: fontStack.heading, fontWeight: 800, fontSize: 18, color: PALETTE.brass,
+            }}>
+              {minutoMostrado || '0'}'
+            </span>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 14 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.6)', fontFamily: fontStack.label, marginBottom: 6 }}>{nombreLocal}</div>
@@ -126,10 +203,19 @@ export function PanelDirecto({ partido, adminId, onCambio }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <input type="text" style={{ ...inputStyle, flex: 1, textAlign: 'center' }} placeholder="Minuto" value={minuto} onChange={(e) => setMinuto(e.target.value)} />
-            <Button variant="ghost" onClick={handleGuardarMinuto} style={{ fontSize: 12.5 }}>Actualizar minuto</Button>
-          </div>
+          {!usarManual ? (
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <button onClick={() => { setMinutoManual(minutoAuto); setUsarManual(true); }} style={{ background: 'none', border: 'none', color: 'rgba(244,246,241,0.5)', fontSize: 11.5, fontFamily: fontStack.label, cursor: 'pointer', textDecoration: 'underline' }}>
+                Corregir minuto a mano
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input type="text" style={{ ...inputStyle, flex: 1, textAlign: 'center' }} placeholder="Minuto" value={minutoManual} onChange={(e) => setMinutoManual(e.target.value)} />
+              <Button variant="ghost" onClick={handleGuardarMinutoManual} style={{ fontSize: 12.5 }}>Guardar</Button>
+              <Button variant="ghost" onClick={handleVolverAutomatico} style={{ fontSize: 12.5 }}>Auto</Button>
+            </div>
+          )}
 
           <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.5)', fontFamily: fontStack.label, textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', fontWeight: 700 }}>
             Estado: {partido.estado_directo === 'primera' ? '1ª parte' : partido.estado_directo === 'descanso' ? 'Descanso' : partido.estado_directo === 'segunda' ? '2ª parte' : partido.estado_directo}
