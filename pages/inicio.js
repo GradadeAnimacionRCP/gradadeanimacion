@@ -329,6 +329,15 @@ function PerfilInicio({ sesion, misSociosAprobados }) {
                   </span>
                 </div>
               </div>
+               {proximoPartido.puerta_cerrada && (
+                <div style={{
+                  textAlign: 'center', marginBottom: 12, padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(200,30,44,0.15)', border: '1px solid rgba(200,30,44,0.5)',
+                  color: '#ff8a8a', fontFamily: fontStack.label, fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5,
+                }}>
+                  🚫 Partido a puerta cerrada
+                </div>
+              )}
               <CuentaAtrasPartido partido={proximoPartido} />
             </>
           ) : (
