@@ -52,6 +52,7 @@ export function PartidoModal({ partido, onClose, onSaved }) {
   const [resultado, setResultado] = useState(partido.resultado || '');
   const [puntosLocal, setPuntosLocal] = useState(partido.puntos_local || '');
   const [puntosRival, setPuntosRival] = useState(partido.puntos_rival || '');
+  const [puertaCerrada, setPuertaCerrada] = useState(partido.puerta_cerrada || false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef(null);
@@ -72,11 +73,13 @@ export function PartidoModal({ partido, onClose, onSaved }) {
     const resultadoNuevo = resultado.trim() || null;
     const horaCambio = !esNuevo && horaNueva && horaNueva !== partido.hora;
     const resultadoCambio = !esNuevo && resultadoNuevo && resultadoNuevo !== partido.resultado;
+    const puertaCerradaCambio = !esNuevo && puertaCerrada && puertaCerrada !== partido.puerta_cerrada;
 
     const registro = {
       rival: rival.trim(), escudo_rival: escudoRival || null, es_local: esLocal, fecha: fecha || null, hora: horaNueva,
       jornada: jornada.trim() || null, estadio: estadio.trim() || null, resultado: resultadoNuevo,
       puntos_local: puntosLocal.trim() || null, puntos_rival: puntosRival.trim() || null,
+      puerta_cerrada: puertaCerrada,
     };
 
     const { error: dbError } = esNuevo
@@ -112,6 +115,16 @@ export function PartidoModal({ partido, onClose, onSaved }) {
         body: JSON.stringify({
           title: '⏰ Hora confirmada',
           body: `${esLocal ? 'Racing vs' : 'vs'} ${rival.trim()}: ${horaNueva.slice(0, 5)}`,
+          url: '/calendario',
+        }),
+      }).catch(() => {});
+    } else if (puertaCerradaCambio) {
+      fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '🚫 Partido a puerta cerrada',
+          body: `El partido ${esLocal ? 'vs' : 'contra'} ${rival.trim()} se jugará a puerta cerrada.`,
           url: '/calendario',
         }),
       }).catch(() => {});
@@ -189,6 +202,22 @@ export function PartidoModal({ partido, onClose, onSaved }) {
             <input style={inputStyle} value={puntosRival} onChange={(e) => setPuntosRival(e.target.value)} placeholder="Rival: 8 pts (7º)" />
           </div>
         </div>
+
+        <button type="button" onClick={() => setPuertaCerrada((v) => !v)} style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 10, cursor: 'pointer',
+          background: puertaCerrada ? 'rgba(200,30,44,0.15)' : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${puertaCerrada ? PALETTE.stripe : 'rgba(244,246,241,0.2)'}`, width: '100%', marginBottom: 16,
+        }}>
+          <div style={{
+            width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: puertaCerrada ? PALETTE.stripe : 'transparent', border: puertaCerrada ? 'none' : '1.5px solid rgba(244,246,241,0.35)',
+          }}>
+            {puertaCerrada && <span style={{ color: PALETTE.chalk, fontSize: 13, fontWeight: 800 }}>✓</span>}
+          </div>
+          <span style={{ fontSize: 13.5, color: PALETTE.chalk, fontFamily: fontStack.label, fontWeight: 700, textAlign: 'left' }}>
+            🚫 Partido a puerta cerrada
+          </span>
+        </button>
 
         {error && <div style={{ color: '#ff8a8a', fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
