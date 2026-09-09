@@ -130,7 +130,17 @@ export function PartidoCard(props) {
           <MapPin size={13} /> {partido.estadio}
         </div>
       )}
+      {!pasado && partido.puerta_cerrada && (
+        <div style={{
+          textAlign: 'center', marginTop: 14, padding: '8px 12px', borderRadius: 10,
+          background: 'rgba(200,30,44,0.15)', border: '1px solid rgba(200,30,44,0.5)',
+          color: '#ff8a8a', fontFamily: fontStack.label, fontWeight: 800, fontSize: 12.5, textTransform: 'uppercase', letterSpacing: 0.5,
+        }}>
+          🚫 Partido a puerta cerrada
+        </div>
+      )}
 
+      {!pasado && partido.estadio && (
       {!pasado && partido.estadio && (
         <a href={"https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(partido.estadio)} target="_blank" rel="noopener noreferrer" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
