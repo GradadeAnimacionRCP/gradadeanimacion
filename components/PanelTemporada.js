@@ -3,7 +3,8 @@ import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button, Field } from './UI';
 import { anioTemporadaActual, getFondoTemporada, setFondoTemporada, eliminarFondoTemporada, prepararImagenFondo } from '../lib/temporada';
 import { getEscudoRacing, setEscudoRacing, prepararEscudo, getTelefonoSoporte, setTelefonoSoporte } from '../lib/config';
-import { Camera, Trash2 } from 'lucide-react';
+import { Camera, Trash2, PartyPopper } from 'lucide-react';
+import { CelebracionVictoria } from './CelebracionVictoria';
 
 function TarjetaTemporada({ anio, etiqueta, colorEtiqueta, fondo, subiendo, onElegir, onQuitar }) {
   return (
@@ -43,6 +44,7 @@ export function PanelTemporada() {
   const [loading, setLoading] = useState(true);
   const [subiendo, setSubiendo] = useState(null);
   const [error, setError] = useState('');
+  const [previsualizarCelebracion, setPrevisualizarCelebracion] = useState(false);
 
   const [anioManual, setAnioManual] = useState('');
   const [fondoManual, setFondoManual] = useState(null);
@@ -131,6 +133,22 @@ export function PanelTemporada() {
 
   return (
     <div>
+      {previsualizarCelebracion && (
+        <CelebracionVictoria onFin={() => setPrevisualizarCelebracion(false)} />
+      )}
+
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.12)', borderRadius: 16, padding: 16, marginBottom: 20 }}>
+        <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 600, fontSize: 15.5, marginBottom: 10 }}>
+          Vista previa
+        </div>
+        <p style={{ fontSize: 12, color: 'rgba(244,246,241,0.55)', margin: '0 0 12px', lineHeight: 1.5 }}>
+          Comprueba cómo se ve la celebración de victoria sin tocar ningún partido ni avisar a nadie.
+        </p>
+        <Button variant="brass" onClick={() => setPrevisualizarCelebracion(true)} style={{ width: '100%' }}>
+          <PartyPopper size={15} /> Probar animación de victoria
+        </Button>
+      </div>
+
       <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(244,246,241,0.12)', borderRadius: 16, padding: 16, marginBottom: 20 }}>
         <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 600, fontSize: 15.5, marginBottom: 10 }}>
           Escudo del Racing (para el Calendario)
