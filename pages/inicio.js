@@ -107,7 +107,7 @@ function BloqueResultadoYRacha({ jugados }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11.5, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, marginBottom: 2 }}>
-          Último partido {ultimo.es_local ? `vs ${ultimo.rival}` : `en ${ultimo.rival}`}
+                    Último partido vs {ultimo.rival}
         </div>
         <div style={{ fontFamily: fontStack.heading, fontWeight: 700, fontSize: 14.5, color: info.color }}>
           {info.texto}
