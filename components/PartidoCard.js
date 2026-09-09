@@ -130,6 +130,7 @@ export function PartidoCard(props) {
           <MapPin size={13} /> {partido.estadio}
         </div>
       )}
+
       {!pasado && partido.puerta_cerrada && (
         <div style={{
           textAlign: 'center', marginTop: 14, padding: '8px 12px', borderRadius: 10,
@@ -140,7 +141,6 @@ export function PartidoCard(props) {
         </div>
       )}
 
-      {!pasado && partido.estadio && (
       {!pasado && partido.estadio && (
         <a href={"https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(partido.estadio)} target="_blank" rel="noopener noreferrer" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4,
