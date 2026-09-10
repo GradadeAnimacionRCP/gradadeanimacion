@@ -19,14 +19,27 @@ function crearConfeti(w, h) {
 function crearGlobos(w, h) {
   return Array.from({ length: 6 }, (_, i) => ({
     x: (w / 7) * (i + 1) + (Math.random() - 0.5) * 40,
-    y: h + 80 + Math.random() * 200,
-    tam: 46 + Math.random() * 18,
-    velY: 2.0 + Math.random() * 1.2,
+    y: h + 100 + Math.random() * 200,
+    ancho: 60 + Math.random() * 20,
+    alto: 74 + Math.random() * 24,
+    velY: 1.8 + Math.random() * 1.1,
     oscilarBase: Math.random() * Math.PI * 2,
     oscilarVel: 0.02 + Math.random() * 0.015,
     girado: 0,
-    velGiro: (0.3 + Math.random() * 0.2) * (Math.random() < 0.5 ? -1 : 1),
+    velGiro: (0.35 + Math.random() * 0.2) * (Math.random() < 0.5 ? -1 : 1),
   }));
+}
+
+function trazarSiluetaGlobo(ctx, cx, cy, ancho, alto) {
+  const w = ancho / 2;
+  const h = alto / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - h);
+  ctx.bezierCurveTo(cx + w * 1.15, cy - h * 0.75, cx + w * 1.05, cy + h * 0.35, cx + w * 0.22, cy + h * 0.82);
+  ctx.lineTo(cx, cy + h * 1.02);
+  ctx.lineTo(cx - w * 0.22, cy + h * 0.82);
+  ctx.bezierCurveTo(cx - w * 1.05, cy + h * 0.35, cx - w * 1.15, cy - h * 0.75, cx, cy - h);
+  ctx.closePath();
 }
 
 const MAX_FRAMES = 720;
@@ -85,34 +98,53 @@ export function CelebracionVictoria({ onFin }) {
         g.y -= g.velY;
         g.girado += g.velGiro;
         const oscilarX = Math.sin(frame * g.oscilarVel + g.oscilarBase) * 18;
+        const cx = g.x + oscilarX;
+        const cy = g.y;
+        const anchoVisible = Math.max(0.12, Math.abs(Math.cos((g.girado * Math.PI) / 180))) * g.ancho;
 
         if (escudoCargado && escudoImg) {
-          const anchoVisible = Math.abs(Math.cos((g.girado * Math.PI) / 180)) * g.tam;
           ctx.save();
-          ctx.globalAlpha = 0.95;
-          ctx.beginPath();
-          ctx.arc(g.x + oscilarX, g.y, g.tam / 2 + 4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255,255,255,0.92)';
-          ctx.fill();
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(g.x + oscilarX, g.y, g.tam / 2 + 4, 0, Math.PI * 2);
+          trazarSiluetaGlobo(ctx, cx, cy, anchoVisible, g.alto);
           ctx.clip();
-          ctx.translate(g.x + oscilarX, g.y);
-          ctx.scale(Math.max(0.08, anchoVisible / g.tam), 1);
-          ctx.drawImage(escudoImg, -g.tam / 2, -g.tam / 2, g.tam, g.tam);
-          ctx.restore();
+
+          ctx.fillStyle = '#F7F5F3';
+          ctx.fillRect(cx - anchoVisible / 2 - 2, cy - g.alto / 2 - 2, anchoVisible + 4, g.alto + 4);
+          ctx.drawImage(escudoImg, cx - anchoVisible / 2, cy - g.alto * 0.42, anchoVisible, g.alto * 0.84);
+
+          const brillo = ctx.createRadialGradient(
+            cx - anchoVisible * 0.22, cy - g.alto * 0.3, anchoVisible * 0.05,
+            cx - anchoVisible * 0.1, cy - g.alto * 0.1, anchoVisible * 0.75
+          );
+          brillo.addColorStop(0, 'rgba(255,255,255,0.55)');
+          brillo.addColorStop(0.5, 'rgba(255,255,255,0.08)');
+          brillo.addColorStop(1, 'rgba(0,0,0,0.12)');
+          ctx.fillStyle = brillo;
+          ctx.fillRect(cx - anchoVisible / 2 - 2, cy - g.alto / 2 - 2, anchoVisible + 4, g.alto + 4);
+
+          const sombraBorde = ctx.createRadialGradient(cx, cy, anchoVisible * 0.3, cx, cy, anchoVisible * 0.75);
+          sombraBorde.addColorStop(0, 'rgba(0,0,0,0)');
+          sombraBorde.addColorStop(1, 'rgba(0,0,0,0.25)');
+          ctx.fillStyle = sombraBorde;
+          ctx.fillRect(cx - anchoVisible / 2 - 2, cy - g.alto / 2 - 2, anchoVisible + 4, g.alto + 4);
+
           ctx.restore();
 
-          ctx.strokeStyle = 'rgba(244,246,241,0.35)';
+          ctx.save();
+          trazarSiluetaGlobo(ctx, cx, cy, anchoVisible, g.alto);
+          ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.strokeStyle = 'rgba(244,246,241,0.4)';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.moveTo(g.x + oscilarX, g.y + g.tam / 2 + 4);
-          ctx.lineTo(g.x + oscilarX * 0.6, g.y + g.tam / 2 + 40);
+          ctx.moveTo(cx, cy + g.alto / 2 + 2);
+          ctx.quadraticCurveTo(cx + oscilarX * 0.3, cy + g.alto / 2 + 22, cx + oscilarX * 0.6, cy + g.alto / 2 + 42);
           ctx.stroke();
         }
       });
-      globos = globos.filter((g) => g.y > -g.tam - 60);
+      globos = globos.filter((g) => g.y > -g.alto - 70);
 
       const quedaAlgo = confeti.length > 0 || globos.length > 0;
       if (quedaAlgo && frame < MAX_FRAMES) {
