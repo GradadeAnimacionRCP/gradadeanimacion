@@ -14,10 +14,12 @@ export function formatFechaPartido(fecha, hora) {
 }
 
 export function partidoEsPasado(partido) {
+  if (partido.resultado) return true;
   if (!partido.fecha) return false;
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   return new Date(`${partido.fecha}T00:00:00`).getTime() < hoy.getTime();
+}
 }
 
 function resultadoInfo(partido) {
