@@ -20,7 +20,6 @@ export function partidoEsPasado(partido) {
   hoy.setHours(0, 0, 0, 0);
   return new Date(`${partido.fecha}T00:00:00`).getTime() < hoy.getTime();
 }
-}
 
 function resultadoInfo(partido) {
   if (!partido.resultado) return null;
