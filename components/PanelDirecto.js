@@ -38,7 +38,7 @@ function puedeIniciarseHoy(partido) {
   return Date.now() >= unaHoraAntes.getTime();
 }
 
-export function PanelDirecto({ partido, adminId, onCambio, confirm, todosPartidos }) {
+export function PanelDirecto({ partido, adminId, onCambio, confirm }) {
   const [minutoManual, setMinutoManual] = useState('');
   const [minutoAuto, setMinutoAuto] = useState('');
   const [usarManual, setUsarManual] = useState(false);
