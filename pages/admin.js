@@ -3,6 +3,8 @@ import { PartidoModal } from '../components/PartidoModal';
 import { NoticiaModal } from '../components/NoticiaModal';
 import { ProductoModal } from '../components/ProductoModal';
 import { PanelTemporada } from '../components/PanelTemporada';
+import { PanelDirecto } from '../components/PanelDirecto';
+import { PanelSorteo } from '../components/PanelSorteo';
 import { useConfirm } from '../components/ConfirmModal';
 import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck, Camera, ShoppingBag } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
@@ -12,8 +14,7 @@ import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from '../components/UI';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
 import { formatFechaPartido } from '../components/PartidoCard';
-import { PanelDirecto } from '../components/PanelDirecto';
-import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle } from 'lucide-react';
+import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle, Ticket } from 'lucide-react';
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
 
@@ -125,6 +126,7 @@ export default function Admin() {
     { id: 'calendario', label: 'Calendario', icon: Calendar, badge: 0 },
     { id: 'noticias', label: 'Noticias', icon: Newspaper, badge: 0 },
     { id: 'tienda', label: 'Tienda', icon: ShoppingBag, badge: 0 },
+    { id: 'sorteo', label: 'Sorteo', icon: Ticket, badge: 0 },
     { id: 'usuarios', label: 'Usuarios', icon: UserCog, badge: (usuarios || []).filter((u) => u.reset_requested).length },
     { id: 'temporada', label: 'Temporada', icon: Camera, badge: 0 },
     { id: 'verificar', label: 'Comprobar', icon: ShieldCheck, badge: 0 },
@@ -498,7 +500,7 @@ export default function Admin() {
                       <Trash2 size={15} style={{ margin: '0 auto' }} />
                     </button>
                   </div>
-                 {!p.resultado && <PanelDirecto partido={p} adminId={sesion.id} onCambio={cargarPartidos} confirm={confirm} todosPartidos={partidos} />}
+                  {!p.resultado && <PanelDirecto partido={p} adminId={sesion.id} onCambio={cargarPartidos} confirm={confirm} />}
                 </div>
               ))}
             </div>
@@ -587,6 +589,10 @@ export default function Admin() {
               ))}
             </div>
           </div>
+        )}
+
+        {tab === 'sorteo' && (
+          <PanelSorteo adminId={sesion.id} partidoId={null} confirm={confirm} />
         )}
 
         {tab === 'usuarios' && (
