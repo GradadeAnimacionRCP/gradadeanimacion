@@ -29,9 +29,9 @@ export function ListaRankingMVP() {
 
   return (
     <div>
-      {historial && historial.length > 0 && (
+           {historial && historial.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-          {historial.map((h) => {
+          {historial.slice(0, 1).map((h) => {
             const puestos = { 1: [], 2: [], 3: [] };
             (h.ganadores || []).forEach((g) => { if (puestos[g.puesto]) puestos[g.puesto].push(g); });
             const etiquetaPuesto = { 1: '🥇 Primer puesto', 2: '🥈 Segundo puesto', 3: '🥉 Tercer puesto' };
