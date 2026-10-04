@@ -5,6 +5,7 @@ import { ProductoModal } from '../components/ProductoModal';
 import { PanelTemporada } from '../components/PanelTemporada';
 import { PanelDirecto } from '../components/PanelDirecto';
 import { PanelSorteo } from '../components/PanelSorteo';
+import { PanelCuota } from '../components/PanelCuota';
 import { useConfirm } from '../components/ConfirmModal';
 import { Pencil, Trash2, Calendar, Plus, Newspaper, UserCog, ShieldCheck, Camera, ShoppingBag } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
@@ -14,7 +15,7 @@ import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from '../components/UI';
 import { formatNumeroSocio, formatFecha, estadoMember, ESTADO_LABEL, ESTADO_COLOR } from '../lib/socios';
 import { formatFechaPartido } from '../components/PartidoCard';
-import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle, Ticket } from 'lucide-react';
+import { UserPlus, Check, X, Users, RefreshCw, AlertTriangle, Ticket, Euro } from 'lucide-react';
 
 const TIPOS_SOCIO = ['General', 'Juvenil', 'Fundador', 'Honorífico'];
 
@@ -127,6 +128,7 @@ export default function Admin() {
     { id: 'noticias', label: 'Noticias', icon: Newspaper, badge: 0 },
     { id: 'tienda', label: 'Tienda', icon: ShoppingBag, badge: 0 },
     { id: 'sorteo', label: 'Sorteo', icon: Ticket, badge: 0 },
+    { id: 'cuota', label: 'Cuota', icon: Euro, badge: 0 },
     { id: 'usuarios', label: 'Usuarios', icon: UserCog, badge: (usuarios || []).filter((u) => u.reset_requested).length },
     { id: 'temporada', label: 'Temporada', icon: Camera, badge: 0 },
     { id: 'verificar', label: 'Comprobar', icon: ShieldCheck, badge: 0 },
@@ -593,6 +595,10 @@ export default function Admin() {
 
         {tab === 'sorteo' && (
           <PanelSorteo adminId={sesion.id} partidoId={null} confirm={confirm} />
+        )}
+
+        {tab === 'cuota' && (
+          <PanelCuota adminId={sesion.id} socios={socios || []} confirm={confirm} />
         )}
 
         {tab === 'usuarios' && (
