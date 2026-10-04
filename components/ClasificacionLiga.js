@@ -3,7 +3,7 @@ import { PALETTE, fontStack } from '../styles/tema';
 import { ExternalLink } from 'lucide-react';
 
 const ANCHO = 450;
-const ALTO = 560;
+const ALTO = 440;
 const FAVORITO = '161';
 const URL_WIDGET =
   'https://www.lapreferente.com/widgetClasificacion.php?comp=26702&colorFondo=F7F5F3&colorFondoCabecera=C9A24B&colorTextoCabecera=0A0A0A&anchoEscudos=18&fontSize=13&favorito=' +
