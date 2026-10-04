@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { getSesionGuardada, borrarSesion, tienePasswordTemporal } from '../lib/session';
 import { PALETTE, fontStack } from '../styles/tema';
-import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle, Lock as LockIcon, Trophy } from 'lucide-react';
+import { Home, CreditCard, Calendar, Newspaper, Lock, ShieldCheck, AlertTriangle, Lock as LockIcon, Trophy, Euro } from 'lucide-react';
 import { useDiaPartido } from '../lib/diaPartido';
+import { BotonSoporte } from './BotonSoporte';
+import { CartelSorteo } from './CartelSorteo';
 
 let sesionCache = undefined;
 
@@ -83,12 +85,36 @@ export function usePendientesGradaCar(sesion) {
   return pendientes;
 }
 
+let cuotaCache = { id: null, valor: undefined, t: 0 };
+
+export function useCuotaPendiente(sesion) {
+  const [desde, setDesde] = useState(() => (sesion && cuotaCache.id === sesion.id ? cuotaCache.valor : undefined));
+  useEffect(() => {
+    if (!sesion) return;
+    if (cuotaCache.id === sesion.id && Date.now() - cuotaCache.t < 60000) {
+      setDesde(cuotaCache.valor);
+      return;
+    }
+    supabase.rpc('cuota_pendiente_cuenta', { p_cuenta_id: sesion.id }).then(({ data, error }) => {
+      if (error) return;
+      cuotaCache = { id: sesion.id, valor: data || null, t: Date.now() };
+      setDesde(data || null);
+    });
+  }, [sesion?.id]);
+  return desde;
+}
+
+function diasRestantesCuota(desde) {
+  return 7 - Math.floor((Date.now() - new Date(desde).getTime()) / 86400000);
+}
+
 export function Layout({ sesion, children }) {
   const router = useRouter();
   const [avisoTemporal, setAvisoTemporal] = useState(false);
   const tieneCarnet = useTieneCarnet(sesion);
   const pendientesGradaCar = usePendientesGradaCar(sesion);
   const partidoHoy = useDiaPartido();
+  const cuotaDesde = useCuotaPendiente(sesion);
 
   useEffect(() => {
     setAvisoTemporal(tienePasswordTemporal());
@@ -105,8 +131,14 @@ export function Layout({ sesion, children }) {
 
   const paginaActualBloqueada = tabs.find((t) => t.href === router.pathname)?.requiereCarnet && tieneCarnet === false;
 
+  const cuotaPendiente = !!cuotaDesde;
+  const esRutaLibre = (ruta) => ruta === '/cuenta' || (!!sesion?.is_admin && ruta === '/admin');
+  const bloqueoCuota = cuotaPendiente && !esRutaLibre(router.pathname);
+  const diasRestantes = cuotaPendiente ? diasRestantesCuota(cuotaDesde) : null;
+  const bloqueado = paginaActualBloqueada || bloqueoCuota;
+
   useEffect(() => {
-    if (paginaActualBloqueada) {
+    if (bloqueado) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
@@ -123,7 +155,11 @@ export function Layout({ sesion, children }) {
       document.body.style.position = '';
       document.body.style.width = '';
     };
-  }, [paginaActualBloqueada]);
+  }, [bloqueado]);
+
+  const textoPlazo = diasRestantes === null ? '' : diasRestantes > 0
+    ? `Te quedan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'} para regularizarlo; si no se resuelve, tu cuenta se inhabilitará.`
+    : 'El plazo de 7 días ha terminado. Contacta cuanto antes para evitar que se inhabilite tu cuenta.';
 
   return (
     <div style={{
@@ -154,11 +190,50 @@ export function Layout({ sesion, children }) {
           <AlertTriangle size={15} /> Estás usando una contraseña temporal. Cámbiala en "Cuenta" cuanto antes.
         </div>
       )}
-      <div style={{ flex: 1, paddingBottom: 70, position: 'relative', overflow: paginaActualBloqueada ? 'hidden' : 'visible' }}>
-        <div style={{ height: paginaActualBloqueada ? '100vh' : 'auto', overflow: paginaActualBloqueada ? 'hidden' : 'visible' }}>
+      {cuotaPendiente && esRutaLibre(router.pathname) && (
+        <div style={{
+          background: 'rgba(200,30,44,0.15)', borderBottom: '1px solid rgba(200,30,44,0.5)',
+          color: '#ffb3b3', fontSize: 12.5, textAlign: 'center', padding: '10px 14px', lineHeight: 1.5,
+          fontFamily: fontStack.label, fontWeight: 700,
+        }}>
+          💶 Cuota anual pendiente (10 €). Contacta con un administrador o desde el grupo de WhatsApp. {textoPlazo}
+        </div>
+      )}
+      <div style={{ flex: 1, paddingBottom: 70, position: 'relative', overflow: bloqueado ? 'hidden' : 'visible' }}>
+        {router.pathname === '/inicio' && !bloqueoCuota && <CartelSorteo />}
+        <div style={{ height: bloqueado ? '100vh' : 'auto', overflow: bloqueado ? 'hidden' : 'visible' }}>
           {children}
         </div>
-        {paginaActualBloqueada && (
+        {bloqueoCuota ? (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(64px + env(safe-area-inset-bottom, 8px))',
+            backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+            background: 'rgba(10,10,10,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 14, padding: 30, textAlign: 'center', zIndex: 40,
+          }}>
+            <Euro size={34} color={PALETTE.brass} />
+            <div>
+              <div style={{ fontFamily: fontStack.heading, color: PALETTE.chalk, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
+                Tienes que pagar la cuota anual
+              </div>
+              <div style={{ fontFamily: fontStack.label, color: 'rgba(244,246,241,0.75)', fontSize: 13, lineHeight: 1.6, maxWidth: 300 }}>
+                Hemos detectado que no has pagado la cuota anual de 10 € de la Grada de Animación. Ponte en contacto con un administrador o desde el grupo de WhatsApp.
+              </div>
+              <div style={{ fontFamily: fontStack.label, color: diasRestantes > 0 ? '#FFD27A' : '#ff8a8a', fontSize: 12.5, fontWeight: 700, lineHeight: 1.5, maxWidth: 300, marginTop: 10 }}>
+                {textoPlazo}
+              </div>
+            </div>
+            <div style={{ width: '100%', maxWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link href="/cuenta" style={{
+                background: PALETTE.brass, color: PALETTE.ink, fontFamily: fontStack.label, fontWeight: 700,
+                fontSize: 13, padding: '10px 20px', borderRadius: 10, textDecoration: 'none',
+              }}>
+                Ir a Cuenta
+              </Link>
+              <BotonSoporte sesion={sesion} mensaje={`Hola, soy ${sesion?.usuario || ''} y quiero regularizar la cuota anual de la Grada de Animación.`} />
+            </div>
+          </div>
+        ) : paginaActualBloqueada && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
@@ -192,12 +267,12 @@ export function Layout({ sesion, children }) {
         {tabs.map((t) => {
           const Icon = t.icon;
           const active = router.pathname === t.href;
-          const bloqueada = t.requiereCarnet && tieneCarnet === false;
+          const bloqueadaTab = (t.requiereCarnet && tieneCarnet === false) || (cuotaPendiente && !esRutaLibre(t.href));
           return (
             <Link key={t.href} href={t.href} style={{
               flex: 1, padding: '10px 4px 8px', position: 'relative',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              color: active ? PALETTE.stripeSoft : bloqueada ? 'rgba(244,246,241,0.25)' : 'rgba(244,246,241,0.55)',
+              color: active ? PALETTE.stripeSoft : bloqueadaTab ? 'rgba(244,246,241,0.25)' : 'rgba(244,246,241,0.55)',
               textDecoration: 'none',
             }}>
               <div style={{ position: 'relative' }}>
