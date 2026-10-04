@@ -1,11 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { PALETTE, fontStack, inputStyle } from '../styles/tema';
 import { Button } from './UI';
 import { supabase } from '../lib/supabase';
 import { Ticket } from 'lucide-react';
 
+const pad = (n) => String(n).padStart(3, '0');
+
 export function PanelSorteo({ adminId, partidoId, confirm }) {
-  const [rango, setRango] = useState('999');
+  const [desde, setDesde] = useState('0');
+  const [hasta, setHasta] = useState('999');
   const [ganador, setGanador] = useState(null);
   const [sorteando, setSorteando] = useState(false);
   const [numeroAnimado, setNumeroAnimado] = useState(null);
@@ -13,19 +16,26 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
   const [error, setError] = useState('');
   const animRef = useRef(null);
 
+  useEffect(() => () => clearTimeout(animRef.current), []);
+
   const handleSortear = async () => {
     setError('');
-    const rangoNum = parseInt(rango, 10);
-    if (isNaN(rangoNum) || rangoNum < 0 || rangoNum > 999) {
-      setError('Pon un rango entre 0 y 999.');
+    const min = parseInt(desde, 10);
+    const max = parseInt(hasta, 10);
+    if (isNaN(min) || isNaN(max) || min < 0 || max > 999) {
+      setError('Pon números entre 0 y 999.');
       return;
     }
-    const ok = await confirm(`¿Realizar el sorteo del 000 al ${String(rangoNum).padStart(3, '0')} ahora mismo? Esta acción no se puede deshacer y avisará a todos los socios.`);
+    if (min > max) {
+      setError('El primer número no puede ser mayor que el último.');
+      return;
+    }
+    const ok = await confirm(`¿Realizar el sorteo entre el ${pad(min)} y el ${pad(max)} ahora mismo? Esta acción no se puede deshacer y avisará a todos los socios.`);
     if (!ok) return;
 
     setSorteando(true);
     const { data, error: dbError } = await supabase.rpc('realizar_sorteo', {
-      p_admin_id: adminId, p_partido_id: partidoId || null, p_rango_maximo: rangoNum,
+      p_admin_id: adminId, p_partido_id: partidoId || null, p_minimo: min, p_maximo: max,
     });
 
     if (dbError) {
@@ -45,13 +55,12 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
       const facilitado = 1 - Math.pow(1 - progreso, 3);
 
       if (progreso < 1) {
-        const numeroAleatorio = Math.floor(Math.random() * (rangoNum + 1));
-        setNumeroAnimado(String(numeroAleatorio).padStart(3, '0'));
-        const siguienteRetraso = 30 + facilitado * 220;
-        animRef.current = setTimeout(animar, siguienteRetraso);
+        const numeroAleatorio = min + Math.floor(Math.random() * (max - min + 1));
+        setNumeroAnimado(pad(numeroAleatorio));
+        animRef.current = setTimeout(animar, 30 + facilitado * 220);
       } else {
         setNumeroAnimado(data);
-        setTimeout(() => {
+        animRef.current = setTimeout(() => {
           setGanador(data);
           setRevelando(false);
           setSorteando(false);
@@ -61,7 +70,7 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
             body: JSON.stringify({
               title: '🎟️ ¡Número ganador del sorteo!',
               body: `El número agraciado es el ${data}. ¡Enhorabuena!`,
-              url: '/calendario',
+              url: '/inicio',
             }),
           }).catch(() => {});
         }, 400);
@@ -93,7 +102,7 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
             display: 'inline-block', padding: '18px 34px', borderRadius: 20,
             background: ganador ? 'linear-gradient(155deg, rgba(201,162,75,0.25), rgba(200,30,44,0.2))' : 'rgba(255,255,255,0.05)',
             border: `2px solid ${ganador ? PALETTE.brass : 'rgba(244,246,241,0.15)'}`,
-            boxShadow: ganador ? `0 0 40px rgba(201,162,75,0.4)` : 'none',
+            boxShadow: ganador ? '0 0 40px rgba(201,162,75,0.4)' : 'none',
             transition: 'all 0.3s',
           }}>
             <div style={{
@@ -120,10 +129,18 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
       ) : (
         <>
           <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', marginTop: 0, marginBottom: 12, lineHeight: 1.5 }}>
-            Pon el número más alto vendido (si se han vendido todas las papeletas, deja 999).
+            Elige el rango de papeletas vendidas. Ejemplo: del 000 al 131.
           </p>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <input type="number" min="0" max="999" style={{ ...inputStyle, flex: 1, textAlign: 'center' }} value={rango} onChange={(e) => setRango(e.target.value)} placeholder="Ej. 131" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, marginBottom: 4, textAlign: 'center', textTransform: 'uppercase', fontWeight: 700 }}>Desde</div>
+              <input type="number" min="0" max="999" style={{ ...inputStyle, textAlign: 'center' }} value={desde} onChange={(e) => setDesde(e.target.value)} placeholder="0" />
+            </div>
+            <div style={{ fontFamily: fontStack.display, fontSize: 20, color: 'rgba(244,246,241,0.35)', marginTop: 18 }}>-</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: 'rgba(244,246,241,0.55)', fontFamily: fontStack.label, marginBottom: 4, textAlign: 'center', textTransform: 'uppercase', fontWeight: 700 }}>Hasta</div>
+              <input type="number" min="0" max="999" style={{ ...inputStyle, textAlign: 'center' }} value={hasta} onChange={(e) => setHasta(e.target.value)} placeholder="999" />
+            </div>
           </div>
           {error && <div style={{ color: '#ff8a8a', fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
           <Button variant="danger" disabled={sorteando} onClick={handleSortear} style={{ width: '100%' }}>
