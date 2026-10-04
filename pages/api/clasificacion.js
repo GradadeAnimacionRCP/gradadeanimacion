@@ -45,6 +45,7 @@ function extraerEquipos(html) {
 }
 
 export default async function handler(req, res) {
+  const debug = !!req.query.debug;
   try {
     const control = new AbortController();
     const temporizador = setTimeout(() => control.abort(), 8000);
@@ -56,12 +57,12 @@ export default async function handler(req, res) {
       },
     });
     clearTimeout(temporizador);
-    if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
+    if (!respuesta.ok) throw new Error('La Preferente respondió con el código HTTP ' + respuesta.status);
 
     const html = decodificar(await respuesta.arrayBuffer());
     const equipos = extraerEquipos(html);
 
-    if (req.query.debug) {
+    if (debug) {
       res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({
         filasEnLaPagina: (html.match(/<tr/gi) || []).length,
@@ -82,6 +83,15 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     return res.status(200).json(datos);
   } catch (err) {
+    if (debug) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(200).json({
+        fallo: true,
+        tipo: err && err.name,
+        mensaje: err && err.message,
+        causa: err && err.cause ? String(err.cause.code || err.cause.message || err.cause) : null,
+      });
+    }
     if (ultimaLectura) {
       res.setHeader('Cache-Control', 'public, s-maxage=300');
       return res.status(200).json({ ...ultimaLectura, obsoleto: true });
