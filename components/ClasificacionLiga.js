@@ -4,10 +4,10 @@ import { ExternalLink } from 'lucide-react';
 
 const ANCHO = 450;
 const ALTO = 440;
-const FAVORITO = '161';
+const FAVORITO = 'Racing C. Portuense';
 const URL_WIDGET =
   'https://www.lapreferente.com/widgetClasificacion.php?comp=26702&colorFondo=F7F5F3&colorFondoCabecera=C9A24B&colorTextoCabecera=0A0A0A&anchoEscudos=18&fontSize=13&favorito=' +
-  FAVORITO +
+  encodeURIComponent(FAVORITO) +
   '&ocultaEvolucion=1&ocultaPosicionAnterior=1';
 const URL_WEB = 'https://www.lapreferente.com/E161/racing-club-portuense';
 
