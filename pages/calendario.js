@@ -10,9 +10,10 @@ import { ListaRankingPredicciones } from '../components/RankingPredicciones';
 import { ListaRankingMVP } from '../components/RankingMVP';
 import { VotacionMVP } from '../components/VotacionMVP';
 import { MarcadorEnVivo } from '../components/MarcadorEnVivo';
+import { ClasificacionLiga } from '../components/ClasificacionLiga';
 import { PALETTE, fontStack } from '../styles/tema';
 import { PartidoCard, partidoEsPasado, formatFechaPartido, IconoLocalizacion } from '../components/PartidoCard';
-import { Calendar, ChevronDown, Car, Trophy, Target, Star } from 'lucide-react';
+import { Calendar, ChevronDown, Car, Trophy, Target, Star, ListOrdered } from 'lucide-react';
 
 function PartidoResumen({ partido }) {
   const titulo = partido.es_local ? `vs ${partido.rival}` : `vs ${partido.rival} (fuera)`;
@@ -47,6 +48,7 @@ const TITULOS = {
   calendario: { titulo: 'CALENDARIO', sub: 'Partidos en casa y fuera de la temporada' },
   gradacar: { titulo: 'GRADACAR', sub: 'Comparte coche con la grada para el próximo partido' },
   ranking: { titulo: 'RANKING', sub: 'Predicciones y MVP de la temporada' },
+  liga: { titulo: 'CLASIFICACIÓN', sub: 'Tercera Federación · Grupo 10' },
 };
 
 export default function CalendarioPage() {
@@ -122,7 +124,7 @@ export default function CalendarioPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
           <button onClick={() => setVista('calendario')} style={pillStyle(vista === 'calendario')}>
             <Calendar size={14} /> Calendario
           </button>
@@ -137,6 +139,9 @@ export default function CalendarioPage() {
           </button>
           <button onClick={() => setVista('ranking')} style={pillStyle(vista === 'ranking')}>
             <Trophy size={14} /> Ranking
+          </button>
+          <button onClick={() => setVista('liga')} style={pillStyle(vista === 'liga')}>
+            <ListOrdered size={14} /> Clasificación
           </button>
         </div>
 
@@ -265,6 +270,8 @@ export default function CalendarioPage() {
             {subVistaRanking === 'predicciones' ? <ListaRankingPredicciones /> : <ListaRankingMVP />}
           </div>
         )}
+
+        {vista === 'liga' && <ClasificacionLiga />}
       </div>
     </Layout>
   );
