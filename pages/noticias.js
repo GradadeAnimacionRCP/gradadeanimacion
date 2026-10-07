@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout } from '../components/Layout';
 import { LoadingCrest } from '../components/LoadingCrest';
+import { Button } from '../components/UI';
 import { PALETTE, fontStack } from '../styles/tema';
 import { NoticiaCard } from '../components/NoticiaCard';
 import { ProductoCard } from '../components/ProductoCard';
-import { Facebook, Instagram, Newspaper, ShoppingBag } from 'lucide-react';
+import { descargarCronicaPDF } from '../lib/pdfNoticia';
+import { Facebook, Instagram, Newspaper, ShoppingBag, Download } from 'lucide-react';
 
 const FACEBOOK_URL = 'https://www.facebook.com/GradaDeAnimacionRCP/';
 const INSTAGRAM_URL = 'https://www.instagram.com/gradadeanimacionrcp?igsi=MXFwazRhaHpsbTlmaw==';
@@ -25,6 +27,9 @@ export default function NoticiasPage() {
   const [vista, setVista] = useState('noticias');
   const [noticias, setNoticias] = useState(undefined);
   const [productos, setProductos] = useState(undefined);
+  const [puedePDF, setPuedePDF] = useState(false);
+  const [generando, setGenerando] = useState(null);
+  const [errorPDF, setErrorPDF] = useState('');
 
   const cargarNoticias = useCallback(async () => {
     const { data } = await supabase.from('noticias').select('*').order('fecha', { ascending: false });
@@ -42,6 +47,24 @@ export default function NoticiasPage() {
     const interval = setInterval(() => { cargarNoticias(); cargarProductos(); }, 60000);
     return () => clearInterval(interval);
   }, [cargarNoticias, cargarProductos]);
+
+  useEffect(() => {
+    if (!sesion) return;
+    if (sesion.is_admin) { setPuedePDF(true); return; }
+    supabase.rpc('cuenta_tiene_cargo', { p_cuenta_id: sesion.id, p_cargo: 'faraon' })
+      .then(({ data }) => setPuedePDF(data === true));
+  }, [sesion?.id, sesion?.is_admin]);
+
+  const handlePDF = async (n) => {
+    setErrorPDF('');
+    setGenerando(n.id);
+    try {
+      await descargarCronicaPDF(n);
+    } catch (err) {
+      setErrorPDF(err.message || 'No se pudo crear el PDF.');
+    }
+    setGenerando(null);
+  };
 
   if (sesion === undefined) {
     return (
@@ -100,9 +123,23 @@ export default function NoticiasPage() {
               <p style={{ fontSize: 13.5 }}>Todavía no hay publicaciones. ¡Vuelve pronto!</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {noticias.map((n) => <NoticiaCard key={n.id} noticia={n} />)}
-            </div>
+            <>
+              {errorPDF && <div style={{ color: '#ff8a8a', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>{errorPDF}</div>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {noticias.map((n) => (
+                  <div key={n.id}>
+                    <NoticiaCard noticia={n} />
+                    {puedePDF && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                        <Button variant="ghost" disabled={generando === n.id} onClick={() => handlePDF(n)} style={{ fontSize: 12.5, padding: '6px 12px' }}>
+                          <Download size={14} /> {generando === n.id ? 'Creando PDF...' : 'Descargar en PDF'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )
         )}
 
