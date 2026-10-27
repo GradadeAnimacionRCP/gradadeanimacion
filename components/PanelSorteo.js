@@ -26,11 +26,12 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
       setError('Pon números entre 0 y 999.');
       return;
     }
-    if (min > max) {
-      setError('El primer número no puede ser mayor que el último.');
-      return;
-    }
-    const ok = await confirm(`¿Realizar el sorteo entre el ${pad(min)} y el ${pad(max)} ahora mismo? Esta acción no se puede deshacer y avisará a todos los socios.`);
+    const vuelta = min > max;
+    const total = vuelta ? (999 - min + 1) + max : max - min + 1;
+    const textoRango = vuelta
+      ? `del ${pad(min)} al 999 y del 001 al ${pad(max)} (${total} números)`
+      : `entre el ${pad(min)} y el ${pad(max)} (${total} números)`;
+    const ok = await confirm(`¿Realizar el sorteo ${textoRango} ahora mismo? Esta acción no se puede deshacer y avisará a todos los socios.`);
     if (!ok) return;
 
     setSorteando(true);
@@ -55,7 +56,8 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
       const facilitado = 1 - Math.pow(1 - progreso, 3);
 
       if (progreso < 1) {
-        const numeroAleatorio = min + Math.floor(Math.random() * (max - min + 1));
+        const k = Math.floor(Math.random() * total);
+        const numeroAleatorio = vuelta ? (k <= 999 - min ? min + k : k - (999 - min)) : min + k;
         setNumeroAnimado(pad(numeroAleatorio));
         animRef.current = setTimeout(animar, 30 + facilitado * 220);
       } else {
@@ -79,6 +81,10 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
 
     animar();
   };
+
+  const minN = parseInt(desde, 10);
+  const maxN = parseInt(hasta, 10);
+  const hayVuelta = !isNaN(minN) && !isNaN(maxN) && minN >= 0 && maxN <= 999 && minN > maxN;
 
   const handleNuevoSorteo = () => {
     clearTimeout(animRef.current);
@@ -129,7 +135,7 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
       ) : (
         <>
           <p style={{ fontSize: 12.5, color: 'rgba(244,246,241,0.6)', marginTop: 0, marginBottom: 12, lineHeight: 1.5 }}>
-            Elige el rango de papeletas vendidas. Ejemplo: del 000 al 131.
+            Elige el rango de papeletas vendidas. Ejemplo: del 000 al 131. Si el rango da la vuelta, pon el primero mayor que el último (ej. 850 → 120 sortea del 850 al 999 y del 001 al 120).
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{ flex: 1 }}>
@@ -142,6 +148,11 @@ export function PanelSorteo({ adminId, partidoId, confirm }) {
               <input type="number" min="0" max="999" style={{ ...inputStyle, textAlign: 'center' }} value={hasta} onChange={(e) => setHasta(e.target.value)} placeholder="999" />
             </div>
           </div>
+          {hayVuelta && (
+            <div style={{ fontSize: 12.5, color: PALETTE.brass, marginBottom: 10, lineHeight: 1.5 }}>
+              🔄 El rango da la vuelta: del {pad(minN)} al 999 y del 001 al {pad(maxN)} ({(999 - minN + 1) + maxN} números).
+            </div>
+          )}
           {error && <div style={{ color: '#ff8a8a', fontSize: 12.5, marginBottom: 10 }}>{error}</div>}
           <Button variant="danger" disabled={sorteando} onClick={handleSortear} style={{ width: '100%' }}>
             {sorteando ? 'Sorteando...' : '🎲 Realizar sorteo'}
