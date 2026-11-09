@@ -516,7 +516,91 @@ function FormulariosAlta({ sesion }) {
         </div>
       </div>
 
-      <div style={{ ...authCardStyle, marginBottom: 22 }}>
+           <div style={{ ...authCardStyle, marginBottom: 22 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <UserPlus size={18} color={PALETTE.stripeSoft} />
-          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400,
+          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Nuevo socio</h2>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <Field label="Nombre">
+            <input style={inputStyle} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </Field>
+          <Field label="Apellidos">
+            <input style={inputStyle} value={apellidos} onChange={(e) => setApellidos(e.target.value)} />
+          </Field>
+          <Field label="Fotografía (opcional)">
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFoto}
+              style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div onClick={() => fileRef.current?.click()} style={{
+                width: 60, height: 60, borderRadius: 12, border: `2px dashed ${PALETTE.brass}`, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'rgba(255,255,255,0.05)',
+              }}>
+                {foto ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Camera size={22} color={PALETTE.brass} />}
+              </div>
+              <Button type="button" variant="ghost" onClick={() => fileRef.current?.click()} style={{ fontSize: 13 }}>
+                {foto ? 'Cambiar' : 'Subir foto'}
+              </Button>
+            </div>
+          </Field>
+          {error && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{error}</div>}
+          {ok && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{ok}</div>}
+          <Button type="submit" variant="primary" disabled={cargando} style={{ width: '100%' }}>
+            {cargando ? 'Generando...' : 'Generar mi carnet'}
+          </Button>
+        </form>
+      </div>
+
+      <div style={authCardStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Search size={18} color={PALETTE.brass} />
+          <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Añadir un carnet</h2>
+        </div>
+        <form onSubmit={handleBuscar}>
+          <Field label="Número de socio">
+            <input style={inputStyle} value={busId} onChange={(e) => setBusId(e.target.value)} placeholder="GDA-0001" />
+          </Field>
+          <Field label="Apellidos">
+            <input style={inputStyle} value={busApellido} onChange={(e) => setBusApellido(e.target.value)} />
+          </Field>
+          {busError && <div style={{ color: '#ff8a8a', fontSize: 13.5, marginBottom: 10 }}>{busError}</div>}
+          {busInfo && <div style={{ color: PALETTE.brass, fontSize: 13.5, marginBottom: 10, lineHeight: 1.5 }}>{busInfo}</div>}
+          <Button type="submit" variant="brass" disabled={busCargando} style={{ width: '100%' }}>
+            {busCargando ? 'Buscando...' : 'Añadir carnet a mi cuenta'}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function Inicio() {
+  const sesion = useSesion();
+  const [misSocios, setMisSocios] = useState(undefined);
+
+  useEffect(() => {
+    if (!sesion) return;
+    supabase.rpc('mis_socios', { p_cuenta_id: sesion.id }).then(({ data }) => setMisSocios(data || []));
+  }, [sesion]);
+
+  if (sesion === undefined || misSocios === undefined) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingCrest texto="Cargando..." />
+      </div>
+    );
+  }
+  if (!sesion) return null;
+
+  const misSociosAprobados = misSocios.filter((s) => s.estado_solicitud === 'aprobado');
+
+  return (
+    <Layout sesion={sesion}>
+      {misSociosAprobados.length === 0 ? (
+        <FormulariosAlta sesion={sesion} />
+      ) : (
+        <PerfilInicio sesion={sesion} misSociosAprobados={misSociosAprobados} />
+      )}
+    </Layout>
+  );
+}
