@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSesion, Layout, usePendientesGradaCar } from '../components/Layout';
 import { useConfirm } from '../components/ConfirmModal';
@@ -11,6 +11,7 @@ import { ListaRankingMVP } from '../components/RankingMVP';
 import { VotacionMVP } from '../components/VotacionMVP';
 import { MarcadorEnVivo } from '../components/MarcadorEnVivo';
 import { ClasificacionLiga } from '../components/ClasificacionLiga';
+import { escudosVigentes, guardarEscudos } from '../lib/escudosPartidos';
 import { PALETTE, fontStack } from '../styles/tema';
 import { PartidoCard, partidoEsPasado, formatFechaPartido, IconoLocalizacion } from '../components/PartidoCard';
 import { Calendar, ChevronDown, Car, Trophy, Target, Star, ListOrdered } from 'lucide-react';
@@ -57,21 +58,57 @@ export default function CalendarioPage() {
   const [vista, setVista] = useState('calendario');
   const [subVistaRanking, setSubVistaRanking] = useState('predicciones');
   const [partidos, setPartidos] = useState(undefined);
+  const [escudos, setEscudos] = useState({});
   const [misSocios, setMisSocios] = useState([]);
   const [expandido, setExpandido] = useState(null);
   const [verJugados, setVerJugados] = useState(false);
   const pendientesGradaCar = usePendientesGradaCar(sesion);
+  const pedidosRef = useRef(new Set());
 
   const cargar = useCallback(async () => {
-    const { data } = await supabase.from('partidos').select('*').order('fecha', { ascending: true, nullsFirst: false });
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    const { data, error } = await supabase.rpc('partidos_sin_escudo');
+    if (error) {
+      const { data: completo } = await supabase.from('partidos').select('*').order('fecha', { ascending: true, nullsFirst: false });
+      setPartidos(completo || []);
+      return;
+    }
     setPartidos(data || []);
   }, []);
 
   useEffect(() => {
     cargar();
     const interval = setInterval(cargar, 60000);
-    return () => clearInterval(interval);
+    const alVolver = () => { if (document.visibilityState === 'visible') cargar(); };
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
   }, [cargar]);
+
+  useEffect(() => {
+    if (!partidos) return;
+    const guardados = escudosVigentes();
+    setEscudos((prev) => ({ ...guardados, ...prev }));
+    const faltan = partidos
+      .filter((p) => p.escudo_rival === undefined && !(p.id in guardados) && !pedidosRef.current.has(p.id))
+      .map((p) => p.id);
+    if (faltan.length === 0) return;
+    faltan.forEach((id) => pedidosRef.current.add(id));
+    supabase.from('partidos').select('id, escudo_rival').in('id', faltan).then(({ data, error }) => {
+      if (error || !data) {
+        faltan.forEach((id) => pedidosRef.current.delete(id));
+        return;
+      }
+      guardarEscudos(data);
+      setEscudos((prev) => {
+        const siguiente = { ...prev };
+        data.forEach((d) => { siguiente[d.id] = d.escudo_rival || null; });
+        return siguiente;
+      });
+    });
+  }, [partidos]);
 
   useEffect(() => {
     if (!sesion) return;
@@ -85,6 +122,8 @@ export default function CalendarioPage() {
       </div>
     );
   }
+
+  const conEscudo = (p) => (p.escudo_rival !== undefined ? p : { ...p, escudo_rival: escudos[p.id] ?? null });
 
   const proximos = (partidos || []).filter((p) => !partidoEsPasado(p));
   const jugados = (partidos || []).filter((p) => partidoEsPasado(p)).reverse();
@@ -173,7 +212,7 @@ export default function CalendarioPage() {
                   </div>
                   <div style={{ marginBottom: 22 }}>
                     <MarcadorEnVivo partido={siguiente} />
-                    <PartidoCard partido={siguiente} destacado />
+                    <PartidoCard partido={conEscudo(siguiente)} destacado />
                     <AsistenciaPartido partidoId={siguiente.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
                     <PrediccionPartido partido={siguiente} sesion={sesion} />
                   </div>
@@ -195,7 +234,7 @@ export default function CalendarioPage() {
                             </button>
                             {expandido === p.id && (
                               <div style={{ padding: '0 10px 12px' }}>
-                                <PartidoCard partido={p} />
+                                <PartidoCard partido={conEscudo(p)} />
                                 <AsistenciaPartido partidoId={p.id} cuentaId={sesion.id} misSocios={misSocios} confirm={confirm} />
                                 <PrediccionPartido partido={p} sesion={sesion} />
                               </div>
@@ -228,7 +267,7 @@ export default function CalendarioPage() {
             </button>
             {verJugados && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {jugados.map((p) => <PartidoCard key={p.id} partido={p} />)}
+                {jugados.map((p) => <PartidoCard key={p.id} partido={conEscudo(p)} />)}
               </div>
             )}
           </div>
