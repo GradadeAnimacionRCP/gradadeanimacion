@@ -516,7 +516,7 @@ function FormulariosAlta({ sesion }) {
         </div>
       </div>
 
-           <div style={{ ...authCardStyle, marginBottom: 22 }}>
+      <div style={{ ...authCardStyle, marginBottom: 22 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <UserPlus size={18} color={PALETTE.stripeSoft} />
           <h2 style={{ fontFamily: fontStack.display, fontWeight: 400, fontSize: 22, margin: 0, color: PALETTE.chalk }}>Nuevo socio</h2>
