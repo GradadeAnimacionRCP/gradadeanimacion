@@ -57,13 +57,26 @@ export function useSesion() {
   return sesion;
 }
 
+let carnetCache = { id: null, valor: null, t: 0 };
+
 export function useTieneCarnet(sesion) {
-  const [tiene, setTiene] = useState(null);
+  const [tiene, setTiene] = useState(() => (sesion && carnetCache.id === sesion.id ? carnetCache.valor : null));
   useEffect(() => {
     if (!sesion) return;
-    supabase.rpc('mis_socios', { p_cuenta_id: sesion.id }).then(({ data }) => {
-      const aprobados = (data || []).filter((s) => s.estado_solicitud === 'aprobado');
-      setTiene(aprobados.length > 0);
+    if (carnetCache.id === sesion.id && Date.now() - carnetCache.t < 120000) {
+      setTiene(carnetCache.valor);
+      return;
+    }
+    supabase.rpc('tiene_carnet_aprobado', { p_cuenta_id: sesion.id }).then(async ({ data, error }) => {
+      let valor;
+      if (error) {
+        const { data: socios } = await supabase.rpc('mis_socios', { p_cuenta_id: sesion.id });
+        valor = (socios || []).some((s) => s.estado_solicitud === 'aprobado');
+      } else {
+        valor = data === true;
+      }
+      carnetCache = { id: sesion.id, valor, t: Date.now() };
+      setTiene(valor);
     });
   }, [sesion?.id]);
   return tiene;
