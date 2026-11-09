@@ -90,7 +90,9 @@ export default function Admin() {
     cargarNoticias();
     cargarProductos();
     cargarUsuarios();
-    const interval = setInterval(cargar, 30000);
+        const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') cargar();
+    }, 300000);
     return () => clearInterval(interval);
   }, [sesion, cargar, cargarPartidos, cargarNoticias, cargarProductos, cargarUsuarios]);
 
