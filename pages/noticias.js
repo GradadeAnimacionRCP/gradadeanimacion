@@ -12,6 +12,12 @@ import { Facebook, Instagram, Newspaper, ShoppingBag, Download } from 'lucide-re
 const FACEBOOK_URL = 'https://www.facebook.com/GradaDeAnimacionRCP/';
 const INSTAGRAM_URL = 'https://www.instagram.com/gradadeanimacionrcp?igsi=MXFwazRhaHpsbTlmaw==';
 
+const VIGENCIA_MS = 3 * 60 * 1000;
+const POR_PAGINA = 10;
+
+let cacheNoticias = null;
+let cacheProductos = null;
+
 function tabPillStyle(active) {
   return {
     flex: 1, padding: '10px 0', borderRadius: 10,
@@ -26,27 +32,47 @@ export default function NoticiasPage() {
   const sesion = useSesion();
   const [vista, setVista] = useState('noticias');
   const [noticias, setNoticias] = useState(undefined);
+  const [hayMas, setHayMas] = useState(false);
+  const [cargandoTodas, setCargandoTodas] = useState(false);
   const [productos, setProductos] = useState(undefined);
   const [puedePDF, setPuedePDF] = useState(false);
   const [generando, setGenerando] = useState(null);
   const [errorPDF, setErrorPDF] = useState('');
 
-  const cargarNoticias = useCallback(async () => {
-    const { data } = await supabase.from('noticias').select('*').order('fecha', { ascending: false });
-    setNoticias(data || []);
-  }, []);
-
-  const cargarProductos = useCallback(async () => {
-    const { data } = await supabase.from('productos').select('*').order('fecha', { ascending: false });
-    setProductos(data || []);
+  const cargarNoticias = useCallback(async (todas) => {
+    const { data, error } = await supabase.from('noticias').select('*')
+      .order('fecha', { ascending: false }).limit(todas ? 500 : POR_PAGINA);
+    if (error) {
+      setNoticias((prev) => (prev === undefined ? [] : prev));
+      return;
+    }
+    const lista = data || [];
+    const masNoticias = !todas && lista.length === POR_PAGINA;
+    cacheNoticias = { t: Date.now(), data: lista, hayMas: masNoticias };
+    setNoticias(lista);
+    setHayMas(masNoticias);
   }, []);
 
   useEffect(() => {
-    cargarNoticias();
-    cargarProductos();
-    const interval = setInterval(() => { cargarNoticias(); cargarProductos(); }, 60000);
-    return () => clearInterval(interval);
-  }, [cargarNoticias, cargarProductos]);
+    if (cacheNoticias && Date.now() - cacheNoticias.t < VIGENCIA_MS) {
+      setNoticias(cacheNoticias.data);
+      setHayMas(cacheNoticias.hayMas);
+      return;
+    }
+    cargarNoticias(false);
+  }, [cargarNoticias]);
+
+  useEffect(() => {
+    if (vista !== 'tienda') return;
+    if (cacheProductos && Date.now() - cacheProductos.t < VIGENCIA_MS) {
+      setProductos(cacheProductos.data);
+      return;
+    }
+    supabase.from('productos').select('*').order('fecha', { ascending: false }).then(({ data }) => {
+      cacheProductos = { t: Date.now(), data: data || [] };
+      setProductos(data || []);
+    });
+  }, [vista]);
 
   useEffect(() => {
     if (!sesion) return;
@@ -54,6 +80,12 @@ export default function NoticiasPage() {
     supabase.rpc('cuenta_tiene_cargo', { p_cuenta_id: sesion.id, p_cargo: 'faraon' })
       .then(({ data }) => setPuedePDF(data === true));
   }, [sesion?.id, sesion?.is_admin]);
+
+  const handleVerTodas = async () => {
+    setCargandoTodas(true);
+    await cargarNoticias(true);
+    setCargandoTodas(false);
+  };
 
   const handlePDF = async (n) => {
     setErrorPDF('');
@@ -139,6 +171,13 @@ export default function NoticiasPage() {
                   </div>
                 ))}
               </div>
+              {hayMas && (
+                <div style={{ textAlign: 'center', marginTop: 18 }}>
+                  <Button variant="ghost" disabled={cargandoTodas} onClick={handleVerTodas}>
+                    {cargandoTodas ? 'Cargando...' : 'Ver todas las noticias'}
+                  </Button>
+                </div>
+              )}
             </>
           )
         )}
