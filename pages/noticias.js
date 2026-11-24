@@ -13,7 +13,7 @@ const FACEBOOK_URL = 'https://www.facebook.com/GradaDeAnimacionRCP/';
 const INSTAGRAM_URL = 'https://www.instagram.com/gradadeanimacionrcp?igsi=MXFwazRhaHpsbTlmaw==';
 
 const VIGENCIA_MS = 3 * 60 * 1000;
-const POR_PAGINA = 10;
+const POR_PAGINA = 5;
 
 let cacheNoticias = null;
 let cacheProductos = null;
